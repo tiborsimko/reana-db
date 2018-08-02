@@ -30,7 +30,9 @@ It contains REANA database models and utilities.
 Features
 --------
 
-- FIXME
+- database persistence for REANA system
+- database models and utilities
+- database upgrades and migrations
 
 Useful links
 ------------
