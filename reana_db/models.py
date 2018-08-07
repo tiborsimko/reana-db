@@ -28,7 +28,7 @@ import enum
 import uuid
 
 from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Integer,
-                        String, UniqueConstraint)
+                        String, Text, UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, UUIDType
@@ -176,13 +176,13 @@ class Job(Base, Timestamp):
     shared_file_system = Column(Boolean)
     docker_img = Column(String(256))
     experiment = Column(String(256))
-    cmd = Column(String(10000))
+    cmd = Column(Text)
     env_vars = Column(String(10000))
     restart_count = Column(Integer)
     max_restart_count = Column(Integer)
     deleted = Column(Boolean)
     logs = Column(String, nullable=True)
-    prettified_cmd = Column(String(1000))
+    prettified_cmd = Column(Text)
     name = Column(String(256))
 
 
