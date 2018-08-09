@@ -142,7 +142,7 @@ class Workflow(Base, Timestamp):
         """Update database workflow status.
 
         :param workflow_uuid: UUID which represents the workflow.
-        :param status: String that represents the analysis status.
+        :param status: String that represents the workflow status.
         :param status_message: String that represents the message
            related with the
            status, if there is any.
