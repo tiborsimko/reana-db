@@ -1,10 +1,12 @@
 Changes
 =======
 
-Version FIXME
+Version 0.3.0 (2018-08-10)
 --------------------------
 
-- Initial public release.
+- This package is a result of refactoring _`<https://reana-commons.readthedocs.io/>`.
+- Provides common REANA models.
+- Provides database connection logic.
 
 .. admonition:: Please beware
 
