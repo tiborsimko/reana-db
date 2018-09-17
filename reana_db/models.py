@@ -72,8 +72,9 @@ class Workflow(Base, Timestamp):
     run_number = Column(Integer)
     status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
     owner_id = Column(UUIDType, ForeignKey('user_.id_'))
-    specification = Column(JSONType)
-    parameters = Column(JSONType)
+    reana_specification = Column(JSONType)
+    # workflow_parameters = Column(JSONType)
+    operational_parameters = Column(JSONType)
     type_ = Column(String(30))
     logs = Column(String)
     run_started_at = Column(DateTime)
@@ -90,15 +91,22 @@ class Workflow(Base, Timestamp):
     __table_args__ = UniqueConstraint('name', 'owner_id', 'run_number',
                                       name='_user_workflow_run_uc'),
 
-    def __init__(self, id_, name, owner_id, specification, parameters, type_,
-                 logs, status=WorkflowStatus.created):
+    def __init__(self,
+                 id_,
+                 name,
+                 owner_id,
+                 reana_specification,
+                 type_,
+                 logs='',
+                 operational_parameters={},
+                 status=WorkflowStatus.created):
         """Initialize workflow model."""
         self.id_ = id_
         self.name = name
         self.status = status
         self.owner_id = owner_id
-        self.specification = specification
-        self.parameters = parameters
+        self.reana_specification = reana_specification
+        self.operational_parameters = operational_parameters
         self.type_ = type_
         self.logs = logs or ''
         from .database import Session
