@@ -2,26 +2,23 @@
  REANA DB
 =========
 
-.. image:: https://img.shields.io/travis/reanahub/reana-db.svg
-      :target: https://travis-ci.org/reanahub/reana-db
-
 .. image:: https://img.shields.io/pypi/pyversions/reana-db.svg
       :target: https://pypi.org/pypi/reana-db
 
-.. image:: https://img.shields.io/coveralls/reanahub/reana-db.svg
-      :target: https://coveralls.io/r/reanahub/reana-db
+.. image:: https://img.shields.io/travis/reanahub/reana-db.svg
+      :target: https://travis-ci.org/reanahub/reana-db
 
 .. image:: https://readthedocs.org/projects/docs/badge/?version=latest
       :target: https://reana-db.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://badge.waffle.io/reanahub/reana.svg?label=Status%3A%20ready%20for%20work&title=Issues%20ready%20for%20work
-      :target: https://waffle.io/reanahub/reana
+.. image:: https://img.shields.io/coveralls/reanahub/reana-db.svg
+      :target: https://coveralls.io/r/reanahub/reana-db
 
 .. image:: https://badges.gitter.im/Join%20Chat.svg
       :target: https://gitter.im/reanahub/reana?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 
 .. image:: https://img.shields.io/github/license/reanahub/reana-db.svg
-      :target: https://github.com/reanahub/reana-db/blob/master/COPYING
+      :target: https://github.com/reanahub/reana-db/blob/master/LICENSE
 
 About
 -----
