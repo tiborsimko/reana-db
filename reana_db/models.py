@@ -73,7 +73,6 @@ class Workflow(Base, Timestamp):
     status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
     owner_id = Column(UUIDType, ForeignKey('user_.id_'))
     reana_specification = Column(JSONType)
-    # workflow_parameters = Column(JSONType)
     operational_parameters = Column(JSONType)
     type_ = Column(String(30))
     logs = Column(String)
@@ -129,6 +128,14 @@ class Workflow(Base, Timestamp):
         :return: Path to the workflow workspace directory.
         """
         return build_workspace_path(self.owner_id, self.id_)
+
+    def get_parameters(self):
+        """Return workflow parameters."""
+        return self.reana_specification['inputs'].get('parameters', {})
+
+    def get_specification(self):
+        """Return workflow specification."""
+        return self.reana_specification['workflow'].get('specification', {})
 
     @staticmethod
     def update_workflow_status(db_session, workflow_uuid, status,
