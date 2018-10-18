@@ -131,7 +131,7 @@ class Workflow(Base, Timestamp):
 
     def get_parameters(self):
         """Return workflow parameters."""
-        return self.reana_specification['inputs'].get('parameters', {})
+        return self.reana_specification.get('inputs', {}).get('parameters', {})
 
     def get_specification(self):
         """Return workflow specification."""
