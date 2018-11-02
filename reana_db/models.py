@@ -60,6 +60,7 @@ class WorkflowStatus(enum.Enum):
     running = 1
     finished = 2
     failed = 3
+    deleted = 4
 
 
 class Workflow(Base, Timestamp):
