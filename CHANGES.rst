@@ -1,15 +1,19 @@
 Changes
 =======
 
-Version 0.4.0 (XXXX-XX-XX)
+Version 0.4.0 (2018-11-06)
 --------------------------
 
-- FIXME
+- Stores ``reana.yaml`` in database models.
+- Adds Workflow specification and parameter getters.
+- Adds support for Python 3.7.
+- Changes license to MIT.
 
 Version 0.3.0 (2018-08-10)
 --------------------------
 
-- This package is a result of refactoring _`<https://reana-commons.readthedocs.io/>`.
+- This package is a result of refactoring `reana-commons
+  <https://reana-commons.readthedocs.io/>`_.
 - Provides common REANA models.
 - Provides database connection logic.
 
