@@ -74,7 +74,8 @@ class Workflow(Base, Timestamp):
     status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
     owner_id = Column(UUIDType, ForeignKey('user_.id_'))
     reana_specification = Column(JSONType)
-    operational_parameters = Column(JSONType)
+    input_parameters = Column(JSONType)
+    operational_options = Column(JSONType)
     type_ = Column(String(30))
     logs = Column(String)
     run_started_at = Column(DateTime)
@@ -98,7 +99,8 @@ class Workflow(Base, Timestamp):
                  reana_specification,
                  type_,
                  logs='',
-                 operational_parameters={},
+                 input_parameters={},
+                 operational_options={},
                  status=WorkflowStatus.created):
         """Initialize workflow model."""
         self.id_ = id_
@@ -106,7 +108,8 @@ class Workflow(Base, Timestamp):
         self.status = status
         self.owner_id = owner_id
         self.reana_specification = reana_specification
-        self.operational_parameters = operational_parameters
+        self.input_parameters = input_parameters
+        self.operational_options = operational_options
         self.type_ = type_
         self.logs = logs or ''
         from .database import Session
@@ -130,7 +133,7 @@ class Workflow(Base, Timestamp):
         """
         return build_workspace_path(self.owner_id, self.id_)
 
-    def get_parameters(self):
+    def get_input_parameters(self):
         """Return workflow parameters."""
         return self.reana_specification.get('inputs', {}).get('parameters', {})
 
