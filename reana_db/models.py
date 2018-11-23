@@ -81,6 +81,7 @@ class Workflow(Base, Timestamp):
     logs = Column(String)
     run_started_at = Column(DateTime)
     run_finished_at = Column(DateTime)
+    run_stopped_at = Column(DateTime)
     run_number = Column(Integer)
     job_progress = Column(JSONType, default=dict)
     # job_progress = {
