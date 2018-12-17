@@ -62,6 +62,7 @@ class WorkflowStatus(enum.Enum):
     failed = 3
     deleted = 4
     stopped = 5
+    queued = 6
 
 
 class Workflow(Base, Timestamp):
@@ -145,14 +146,13 @@ class Workflow(Base, Timestamp):
 
     @staticmethod
     def update_workflow_status(db_session, workflow_uuid, status,
-                               new_logs, message=None):
+                               new_logs='', message=None):
         """Update database workflow status.
 
         :param workflow_uuid: UUID which represents the workflow.
         :param status: String that represents the workflow status.
-        :param status_message: String that represents the message
-           related with the
-           status, if there is any.
+        :param new_logs: New logs from workflow execution.
+        :param message: Unused.
         """
         try:
             workflow = \
