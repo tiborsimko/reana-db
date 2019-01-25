@@ -163,7 +163,7 @@ class Workflow(Base, Timestamp):
                                 format(workflow_uuid))
             if status:
                 workflow.status = status
-            workflow.logs = (workflow.logs or "") + new_logs
+            workflow.logs = (workflow.logs or "") + new_logs + '\n'
             db_session.commit()
         except Exception as e:
             raise e
