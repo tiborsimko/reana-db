@@ -144,6 +144,14 @@ class Workflow(Base, Timestamp):
         """Return workflow specification."""
         return self.reana_specification['workflow'].get('specification', {})
 
+    def get_owner_access_token(self):
+        """Return workflow owner access token."""
+        from .database import Session
+        db_session = Session.object_session(self)
+        owner = db_session.query(User).filter_by(
+            id_=self.owner_id).first()
+        return owner.access_token
+
     @staticmethod
     def update_workflow_status(db_session, workflow_uuid, status,
                                new_logs='', message=None):
