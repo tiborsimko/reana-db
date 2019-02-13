@@ -163,7 +163,8 @@ class Workflow(Base, Timestamp):
                                 format(workflow_uuid))
             if status:
                 workflow.status = status
-            workflow.logs = (workflow.logs or "") + new_logs + '\n'
+            if new_logs:
+                workflow.logs = (workflow.logs or '') + new_logs + '\n'
             db_session.commit()
         except Exception as e:
             raise e
@@ -179,18 +180,18 @@ class Job(Base, Timestamp):
     workflow_uuid = Column(UUIDType)
     status = Column(String(30))
     job_type = Column(String(30))
-    cvmfs_mounts = Column(String(256))
+    cvmfs_mounts = Column(Text)
     shared_file_system = Column(Boolean)
     docker_img = Column(String(256))
     experiment = Column(String(256))
     cmd = Column(Text)
-    env_vars = Column(String(10000))
+    env_vars = Column(Text)
     restart_count = Column(Integer)
     max_restart_count = Column(Integer)
     deleted = Column(Boolean)
     logs = Column(String, nullable=True)
     prettified_cmd = Column(Text)
-    name = Column(String(256))
+    name = Column(Text)
 
 
 class JobCache(Base, Timestamp):
