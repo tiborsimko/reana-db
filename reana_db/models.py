@@ -80,6 +80,7 @@ class Workflow(Base, Timestamp):
     operational_options = Column(JSONType)
     type_ = Column(String(30))
     interactive_session = Column(Text)
+    interactive_session_name = Column(Text)
     logs = Column(String)
     run_started_at = Column(DateTime)
     run_finished_at = Column(DateTime)
@@ -104,6 +105,7 @@ class Workflow(Base, Timestamp):
                  type_,
                  logs='',
                  interactive_session=None,
+                 interactive_session_name=None,
                  input_parameters={},
                  operational_options={},
                  status=WorkflowStatus.created):
@@ -118,6 +120,7 @@ class Workflow(Base, Timestamp):
         self.type_ = type_
         self.logs = logs or ''
         self.interactive_session = interactive_session
+        self.interactive_session_name = interactive_session_name
         from .database import Session
         last_workflow = Session.query(Workflow).filter_by(
             name=name,
