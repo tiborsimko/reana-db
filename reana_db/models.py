@@ -65,6 +65,17 @@ class WorkflowStatus(enum.Enum):
     queued = 6
 
 
+class JobStatus(enum.Enum):
+    """Enumeration of possible job statuses."""
+
+    created = 0
+    running = 1
+    finished = 2
+    failed = 3
+    stopped = 4
+    queued = 5
+
+
 class Workflow(Base, Timestamp):
     """Workflow table."""
 
@@ -196,11 +207,10 @@ class Job(Base, Timestamp):
                  default=generate_uuid)
     workflow_uuid = Column(UUIDType)
     status = Column(String(30))
-    job_type = Column(String(30))
+    backend = Column(String(30))
     cvmfs_mounts = Column(Text)
     shared_file_system = Column(Boolean)
     docker_img = Column(String(256))
-    experiment = Column(String(256))
     cmd = Column(Text)
     env_vars = Column(Text)
     restart_count = Column(Integer)
