@@ -205,8 +205,9 @@ class Job(Base, Timestamp):
 
     id_ = Column(UUIDType, unique=True, primary_key=True,
                  default=generate_uuid)
+    backend_job_id = Column(String(256))
     workflow_uuid = Column(UUIDType)
-    status = Column(String(30))
+    status = Column(Enum(JobStatus), default=JobStatus.created)
     backend = Column(String(30))
     cvmfs_mounts = Column(Text)
     shared_file_system = Column(Boolean)
