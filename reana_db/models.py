@@ -212,13 +212,13 @@ class Job(Base, Timestamp):
     cvmfs_mounts = Column(Text)
     shared_file_system = Column(Boolean)
     docker_img = Column(String(256))
-    cmd = Column(Text)
-    env_vars = Column(Text)
+    cmd = Column(JSONType)
+    env_vars = Column(JSONType)
     restart_count = Column(Integer)
     max_restart_count = Column(Integer)
     deleted = Column(Boolean)
     logs = Column(String, nullable=True)
-    prettified_cmd = Column(Text)
+    prettified_cmd = Column(JSONType)
     name = Column(Text)
 
 
