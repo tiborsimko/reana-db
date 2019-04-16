@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018 CERN.
+# Copyright (C) 2018, 2019 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -17,7 +17,7 @@ def build_workspace_path(user_id, workflow_id=None):
     :param user_id: Owner of the workspace.
     :param workflow_id: Optional parameter, if provided gives the path to the
         workflow workspace instead of just the path to the user workspace.
-    :return: String that represents the workspace the OS independent path.
+    :return: String that represents the workspace relative path.
         i.e. users/0000/workflows/0034
     """
     workspace_path = os.path.join('users', str(user_id), 'workflows')
@@ -42,7 +42,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
         is returned.
     :type uuid_or_name: String
 
-    :rtype: reana-commons.models.Workflow
+    :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
     # Check existence
@@ -132,7 +132,7 @@ def _get_workflow_by_name(workflow_name, user_uuid):
 
     Only use when you are sure that workflow_name is not UUIDv4.
 
-    :rtype: reana-commons.models.Workflow
+    :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
     workflow = Workflow.query.filter(
@@ -155,7 +155,7 @@ def _get_workflow_by_uuid(workflow_uuid):
     :param workflow_uuid: UUIDv4 of a Workflow.
     :type workflow_uuid: String representing a valid UUIDv4.
 
-    :rtype: reana-commons.models.Workflow
+    :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
     workflow = Workflow.query.filter(Workflow.id_ ==
