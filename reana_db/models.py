@@ -83,7 +83,6 @@ class Workflow(Base, Timestamp):
 
     id_ = Column(UUIDType, primary_key=True)
     name = Column(String(255))
-    run_number = Column(Integer)
     status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
     owner_id = Column(UUIDType, ForeignKey('user_.id_'))
     reana_specification = Column(JSONType)
@@ -171,6 +170,10 @@ class Workflow(Base, Timestamp):
         owner = db_session.query(User).filter_by(
             id_=self.owner_id).first()
         return owner.access_token
+
+    def get_full_workflow_name(self):
+        """Return full workflow name including run number."""
+        return "{}.{}".format(self.name, self.run_number)
 
     @staticmethod
     def update_workflow_status(db_session, workflow_uuid, status,
