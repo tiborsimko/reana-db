@@ -211,7 +211,7 @@ class Job(Base, Timestamp):
     backend_job_id = Column(String(256))
     workflow_uuid = Column(UUIDType)
     status = Column(Enum(JobStatus), default=JobStatus.created)
-    backend = Column(String(30))
+    compute_backend = Column(String(30))
     cvmfs_mounts = Column(Text)
     shared_file_system = Column(Boolean)
     docker_img = Column(String(256))
@@ -222,7 +222,7 @@ class Job(Base, Timestamp):
     deleted = Column(Boolean)
     logs = Column(String, nullable=True)
     prettified_cmd = Column(JSONType)
-    name = Column(Text)
+    job_name = Column(Text)
 
 
 class JobCache(Base, Timestamp):
