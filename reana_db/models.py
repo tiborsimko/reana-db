@@ -104,6 +104,8 @@ class Workflow(Base, Timestamp):
     #  jobs_finished = {job_ids: [], total: c}
     #  jobs_failed = {job_ids: [], total: c}}
     engine_specific = Column(JSONType)
+    callback_url = Column(String(255))
+    git_ref = Column(String(40))
 
     __table_args__ = UniqueConstraint('name', 'owner_id', 'run_number',
                                       name='_user_workflow_run_uc'),
