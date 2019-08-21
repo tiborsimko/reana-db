@@ -220,8 +220,6 @@ class Job(Base, Timestamp):
     docker_img = Column(String(256))
     cmd = Column(JSONType)
     env_vars = Column(JSONType)
-    restart_count = Column(Integer)
-    max_restart_count = Column(Integer)
     deleted = Column(Boolean)
     logs = Column(String, nullable=True)
     prettified_cmd = Column(JSONType)
