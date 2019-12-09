@@ -39,6 +39,8 @@ class User(Base, Timestamp):
                  default=generate_uuid)
     access_token = Column(String(length=255))
     email = Column(String(length=255), unique=True, primary_key=True)
+    full_name = Column(String(length=255))
+    username = Column(String(length=255))
     workflows = relationship("Workflow", backref="user_")
 
     def __repr__(self):
