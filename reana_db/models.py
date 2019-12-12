@@ -105,6 +105,8 @@ class Workflow(Base, Timestamp):
     #  jobs_failed = {job_ids: [], total: c}}
     engine_specific = Column(JSONType)
     git_ref = Column(String(40))
+    git_repo = Column(String(255))
+    git_provider = Column(String(255))
 
     __table_args__ = UniqueConstraint('name', 'owner_id', 'run_number',
                                       name='_user_workflow_run_uc'),
@@ -122,7 +124,9 @@ class Workflow(Base, Timestamp):
                  input_parameters={},
                  operational_options={},
                  status=WorkflowStatus.created,
-                 git_ref=''):
+                 git_ref='',
+                 git_repo=None,
+                 git_provider=None):
         """Initialize workflow model."""
         self.id_ = id_
         self.name = name
@@ -137,6 +141,8 @@ class Workflow(Base, Timestamp):
         self.interactive_session_name = interactive_session_name
         self.interactive_session_type = interactive_session_type
         self.git_ref = git_ref
+        self.git_repo = git_repo
+        self.git_provider = git_provider
         from .database import Session
         last_workflow = Session.query(Workflow).filter_by(
             name=name,
