@@ -1,6 +1,19 @@
 Changes
 =======
 
+Version 0.6.0 (2019-12-19)
+--------------------------
+
+- Adds new method which returns full workflow name.
+- Adds more granular DB configuration.
+- Adds Git repository information to the workflow model.
+  (``Workflow.git_repo``, ``Workflow.git_provider``)
+- Adds user name information to the user model.
+  (``User.full_name``, ``User.username``)
+- Removes restart count information from the job model.
+  (``Job.restart_count``, ``Job.max_restart_count``)
+- Adds support for Python 3.8.
+
 Version 0.5.0 (2019-04-16)
 --------------------------
 
