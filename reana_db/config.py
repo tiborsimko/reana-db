@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018 CERN.
+# Copyright (C) 2018, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -45,6 +45,22 @@ SQLALCHEMY_DATABASE_URI = os.getenv(
 )
 """SQLAlchemy database location."""
 
+SQLALCHEMY_MAX_OVERFLOW = int(float(os.getenv("SQLALCHEMY_MAX_OVERFLOW", 2)))
+"""How many new connections can temporarily exceed the pool size?"""
+
+SQLALCHEMY_POOL_PRE_PING = (
+    os.getenv("SQLALCHEMY_POOL_PRE_PING", "False").lower() == "true"
+)
+"""Do we always pre-ping for pessimistic connection handling?"""
+
+SQLALCHEMY_POOL_RECYCLE = int(float(os.getenv("SQLALCHEMY_POOL_RECYCLE", 3600)))
+"""How many seconds a connection can persist?"""
+
+SQLALCHEMY_POOL_SIZE = int(float(os.getenv("SQLALCHEMY_POOL_SIZE", 5)))
+"""How many permanent connections to the database to keep?"""
+
+SQLALCHEMY_POOL_TIMEOUT = int(float(os.getenv("SQLALCHEMY_POOL_TIMEOUT", 30)))
+"""How many seconds to wait when retrieving a new connection from the pool?"""
 
 DEFAULT_QUOTA_RESOURCES = {
     "cpu": "processing time",

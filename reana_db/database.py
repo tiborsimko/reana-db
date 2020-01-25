@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -15,11 +15,25 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.schema import CreateSchema
 from sqlalchemy_utils import create_database, database_exists
 
-from .config import SQLALCHEMY_DATABASE_URI
+from .config import (
+    SQLALCHEMY_DATABASE_URI,
+    SQLALCHEMY_MAX_OVERFLOW,
+    SQLALCHEMY_POOL_PRE_PING,
+    SQLALCHEMY_POOL_RECYCLE,
+    SQLALCHEMY_POOL_SIZE,
+    SQLALCHEMY_POOL_TIMEOUT,
+)
 
 from reana_db.models import Base  # isort:skip  # noqa
 
-engine = create_engine(SQLALCHEMY_DATABASE_URI)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URI,
+    max_overflow=SQLALCHEMY_MAX_OVERFLOW,
+    pool_pre_ping=SQLALCHEMY_POOL_PRE_PING,
+    pool_recycle=SQLALCHEMY_POOL_RECYCLE,
+    pool_size=SQLALCHEMY_POOL_SIZE,
+    pool_timeout=SQLALCHEMY_POOL_TIMEOUT,
+)
 Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base.query = Session.query_property()
 
