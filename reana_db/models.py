@@ -13,9 +13,10 @@ from __future__ import absolute_import
 import enum
 import uuid
 
-from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Integer,
+from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
                         String, Text, UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
@@ -98,8 +99,10 @@ class Workflow(Base, Timestamp):
     run_started_at = Column(DateTime)
     run_finished_at = Column(DateTime)
     run_stopped_at = Column(DateTime)
-    run_number = Column(Integer)
+    _run_number = Column('run_number', Float)
     job_progress = Column(JSONType, default=dict)
+    workspace_path = Column(String)
+    restart = Column(Boolean, default=False)
     # job_progress = {
     #  jobs_total = {total: job_number}
     #  jobs_running = {job_ids: [], total: c}
@@ -128,7 +131,10 @@ class Workflow(Base, Timestamp):
                  status=WorkflowStatus.created,
                  git_ref='',
                  git_repo=None,
-                 git_provider=None):
+                 git_provider=None,
+                 workspace_path=None,
+                 restart=False,
+                 run_number=None):
         """Initialize workflow model."""
         self.id_ = id_
         self.name = name
@@ -145,26 +151,50 @@ class Workflow(Base, Timestamp):
         self.git_ref = git_ref
         self.git_repo = git_repo
         self.git_provider = git_provider
-        from .database import Session
-        last_workflow = Session.query(Workflow).filter_by(
-            name=name,
-            owner_id=owner_id).\
-            order_by(Workflow.run_number.desc()).first()
-        if not last_workflow:
-            self.run_number = 1
-        else:
-            self.run_number = last_workflow.run_number + 1
+        self.restart = restart
+        self._run_number = self.assign_run_number(run_number)
+        self.workspace_path = workspace_path or build_workspace_path(
+            self.owner_id, self.id_)
 
     def __repr__(self):
         """Workflow string represetantion."""
         return '<Workflow %r>' % self.id_
 
-    def get_workspace(self):
-        """Build workflow directory path.
+    @hybrid_property
+    def run_number(self):
+        """Property of run_number."""
+        if self._run_number.is_integer():
+            return int(self._run_number)
+        return self._run_number
 
-        :return: Path to the workflow workspace directory.
-        """
-        return build_workspace_path(self.owner_id, self.id_)
+    @run_number.expression
+    def run_number(cls):
+        from sqlalchemy import func
+        return func.abs(cls._run_number)
+
+    def assign_run_number(self, run_number):
+        """Assing run number."""
+        from .database import Session
+        if run_number:
+            last_workflow = Session.query(Workflow).filter(
+                Workflow.name == self.name,
+                Workflow.run_number >= int(run_number),
+                Workflow.run_number < int(run_number) + 1,
+                Workflow.owner_id == self.owner_id).\
+                order_by(Workflow.run_number.desc()).first()
+        else:
+            last_workflow = Session.query(Workflow).filter_by(
+                name=self.name,
+                restart=False,
+                owner_id=self.owner_id).\
+                order_by(Workflow.run_number.desc()).first()
+        if last_workflow and self.restart:
+            return last_workflow.run_number + 0.1
+        else:
+            if not last_workflow:
+                return 1
+            else:
+                return last_workflow.run_number + 1
 
     def get_input_parameters(self):
         """Return workflow parameters."""
@@ -184,7 +214,7 @@ class Workflow(Base, Timestamp):
 
     def get_full_workflow_name(self):
         """Return full workflow name including run number."""
-        return "{}.{}".format(self.name, self.run_number)
+        return "{}.{}".format(self.name, str(self.run_number))
 
     @staticmethod
     def update_workflow_status(db_session, workflow_uuid, status,

@@ -88,7 +88,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
 
         # Try to split the dot-separated string.
         try:
-            workflow_name, run_number = uuid_or_name.rsplit('.', maxsplit=1)
+            workflow_name, run_number = uuid_or_name.split('.', maxsplit=1)
         except ValueError:
             # Couldn't split. Probably not a dot-separated string.
             #  -> Search with `uuid_or_name`
@@ -102,7 +102,9 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
 
         # `run_number` was specified.
         # Check `run_number` is valid.
-        if not run_number.isdigit():
+        try:
+            float(run_number)
+        except ValueError:
             # `uuid_or_name` was split, so it is a dot-separated string
             # but it didn't contain a valid `run_number`.
             # Assume that this dot-separated string is the name of
