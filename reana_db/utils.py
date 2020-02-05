@@ -103,7 +103,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
         # `run_number` was specified.
         # Check `run_number` is valid.
         try:
-            float(run_number)
+            run_number = float(run_number)
         except ValueError:
             # `uuid_or_name` was split, so it is a dot-separated string
             # but it didn't contain a valid `run_number`.
