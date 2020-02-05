@@ -189,7 +189,7 @@ class Workflow(Base, Timestamp):
                 owner_id=self.owner_id).\
                 order_by(Workflow.run_number.desc()).first()
         if last_workflow and self.restart:
-            return last_workflow.run_number + 0.1
+            return round(last_workflow.run_number + 0.1, 1)
         else:
             if not last_workflow:
                 return 1
