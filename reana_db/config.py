@@ -19,8 +19,11 @@ DB_USERNAME = os.getenv('REANA_DB_USERNAME', 'reana')
 DB_PASSWORD = os.getenv('REANA_DB_PASSWORD', 'reana')
 """Database password."""
 
-DB_HOST = os.getenv('REANA_DB_HOST', 'db')
+DB_HOST = os.getenv('REANA_DB_HOST',
+                    f'{os.getenv("REANA_COMPONENT_PREFIX")}-db')
 """Database service host."""
+# Loading REANA_COMPONENT_PREFIX from environment because REANA-DB
+# doesn't depend on REANA-Commons, the package which loads this config.
 
 DB_PORT = os.getenv('REANA_DB_PORT', '5432')
 """Database service port."""
