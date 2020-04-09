@@ -68,6 +68,26 @@ class WorkflowStatus(enum.Enum):
     queued = 6
 
 
+ALLOWED_WORKFLOW_STATUS_TRANSITIONS = [
+    # Creation
+    (WorkflowStatus.created, WorkflowStatus.deleted),
+    (WorkflowStatus.created, WorkflowStatus.running),
+    # Running
+    (WorkflowStatus.running, WorkflowStatus.failed),
+    (WorkflowStatus.running, WorkflowStatus.finished),
+    (WorkflowStatus.running, WorkflowStatus.stopped),
+    (WorkflowStatus.running, WorkflowStatus.running),
+    # Stopped
+    (WorkflowStatus.stopped, WorkflowStatus.deleted),
+    # Failed
+    (WorkflowStatus.failed, WorkflowStatus.deleted),
+    (WorkflowStatus.failed, WorkflowStatus.running),
+    # Finished
+    (WorkflowStatus.finished, WorkflowStatus.deleted),
+    (WorkflowStatus.finished, WorkflowStatus.running),
+]
+
+
 class JobStatus(enum.Enum):
     """Enumeration of possible job statuses."""
 
@@ -240,6 +260,11 @@ class Workflow(Base, Timestamp):
             db_session.commit()
         except Exception as e:
             raise e
+
+    def can_transition_to(self, next_status):
+        """Whether the provided workflow can transition to the next status."""
+        current_transition = (self.status, next_status)
+        return current_transition in ALLOWED_WORKFLOW_STATUS_TRANSITIONS
 
 
 class Job(Base, Timestamp):
