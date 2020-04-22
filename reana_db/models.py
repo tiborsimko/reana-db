@@ -43,6 +43,7 @@ class User(Base, Timestamp):
     full_name = Column(String(length=255))
     username = Column(String(length=255))
     workflows = relationship("Workflow", backref="user_")
+    audit_logs = relationship("AuditLog", backref="user_")
 
     def __repr__(self):
         """User string represetantion."""
@@ -301,3 +302,25 @@ class JobCache(Base, Timestamp):
     result_path = Column(String(1024))
     workspace_hash = Column(String(1024))
     access_times = Column(JSONType)
+
+
+class AuditLogAction(enum.Enum):
+    """Enumeration of audit log actions."""
+
+    request_token = 0
+
+
+class AuditLog(Base, Timestamp):
+    """Audit log table."""
+
+    __tablename__ = 'audit_log'
+
+    id_ = Column(UUIDType, unique=True, primary_key=True,
+                 default=generate_uuid)
+    user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
+    action = Column(Enum(AuditLogAction), nullable=False)
+    details = Column(JSONType)
+
+    def __repr__(self):
+        """Audit log string representation."""
+        return f'<AuditLog {self.id_} {self.action}>'
