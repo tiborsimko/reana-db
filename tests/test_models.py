@@ -11,9 +11,10 @@
 from uuid import uuid4
 
 import pytest
+import sqlalchemy
 
-from reana_db.models import (ALLOWED_WORKFLOW_STATUS_TRANSITIONS, Workflow,
-                             WorkflowStatus)
+from reana_db.models import (ALLOWED_WORKFLOW_STATUS_TRANSITIONS, AuditLog,
+                             AuditLogAction, User, Workflow, WorkflowStatus)
 
 
 def test_workflow_run_number_assignment(db, session):
@@ -111,3 +112,35 @@ def test_workflow_can_transition_to(db, session, from_status, to_status,
     session.add(workflow)
     session.commit()
     assert workflow.can_transition_to(to_status) is can_transition
+
+
+@pytest.mark.parametrize(
+    'action, can_do',
+    [
+        (AuditLogAction.request_token, True),
+        ('request_token', True),
+        ('delete_database', False),
+    ]
+)
+def test_audit_action(session, new_user, action, can_do):
+    """."""
+    details = {'reason': 'Use REANA.'}
+
+    def _audit_action():
+        audited_action = AuditLog(
+            user_id=new_user.id_,
+            action=action,
+            details=details,
+        )
+        session.add(audited_action)
+        session.commit()
+        return audited_action
+
+    if can_do:
+        audited_action = _audit_action()
+        assert audited_action.action == \
+            getattr(AuditLogAction, getattr(action, 'name', action))
+        assert audited_action.details == details
+    else:
+        with pytest.raises(sqlalchemy.exc.IntegrityError):
+            _audit_action()

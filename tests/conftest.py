@@ -8,12 +8,15 @@
 
 """Pytest configuration for REANA-DB."""
 
+
+from uuid import uuid4
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy_utils import create_database, database_exists, drop_database
 
-from reana_db.models import Base
+from reana_db.models import Base, User
 
 
 @pytest.fixture(scope="module")
@@ -53,3 +56,12 @@ def session(db):
     _Session.configure(bind=db)
     yield Session
     Session.close()
+
+
+@pytest.fixture
+def new_user(session):
+    """Create new user."""
+    user = User(email=f'{uuid4()}@reana.io', access_token='secretkey')
+    session.add(user)
+    session.commit()
+    return user
