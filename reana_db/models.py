@@ -54,29 +54,33 @@ class User(Base, Timestamp):
 
     @hybrid_property
     def active_token(self):
-        """."""  # TODO
-        return (self.tokens.filter_by(status='active')
-                .order_by(UserToken.created.desc())).one_or_none()
+        """REANA active access token object."""
+        return self.tokens.filter_by(status=UserTokenStatus.active,
+                                     type_=UserTokenType.reana).one_or_none()
 
     @hybrid_property
     def access_token(self):
-        """."""
+        """REANA active access token value."""
         return self.active_token.token if self.active_token else None
 
     @access_token.setter
     def access_token(self, value):
-        """."""
+        """REANA access token setter."""
         from .database import Session
-        user_token = UserToken(user_=self, token=value, status='active')
-        Session.add(user_token)
-        # XXX: Perhaps this shouldn't be done. If session.commit() for user
-        # fails, a UserToken would be created anyhow.
-        Session.commit()
+        if self.tokens.count() and self.active_token:
+            raise Exception(f'User {self} has already a valid access token.')
+        else:
+            user_token = UserToken(user_=self, token=value,
+                                   status=UserTokenStatus.active,
+                                   type_=UserTokenType.reana)
+            Session.add(user_token)
 
     @hybrid_property
     def access_token_status(self):
-        """."""
-        return self.active_token.status if self.active_token else None
+        """REANA most recent access token status."""
+        latest_reana_token = (self.tokens.filter_by(type_=UserTokenType.reana)
+                              .order_by(UserToken.created.desc())).first()
+        return latest_reana_token.status.name if latest_reana_token else None
 
     def __repr__(self):
         """User string represetantion."""
@@ -90,16 +94,29 @@ class User(Base, Timestamp):
         return build_workspace_path(self.id_)
 
 
+class UserTokenStatus(enum.Enum):
+    """Enumeration of possible user token statuses."""
+
+    requested = 0
+    active = 1
+    revoked = 2
+
+
+class UserTokenType(enum.Enum):
+    """Enumeration of possible user token types."""
+
+    reana = 0
+
+
 class UserToken(Base, Timestamp):
-    """."""
+    """User tokens table."""
 
     __tablename__ = 'user_token'
 
     token = Column(String(length=255), primary_key=True, unique=True)
-    status = Column(String(length=255))
+    status = Column(Enum(UserTokenStatus))
     user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
-    # TODO type
-    # COnstraint type-status(valid)-user
+    type_ = Column(Enum(UserTokenType), nullable=False)
 
 
 class WorkflowStatus(enum.Enum):
