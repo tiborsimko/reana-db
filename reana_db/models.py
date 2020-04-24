@@ -38,12 +38,45 @@ class User(Base, Timestamp):
 
     id_ = Column(UUIDType, primary_key=True, unique=True,
                  default=generate_uuid)
-    access_token = Column(String(length=255))
     email = Column(String(length=255), unique=True, primary_key=True)
     full_name = Column(String(length=255))
     username = Column(String(length=255))
+    tokens = relationship("UserToken", backref="user_", lazy="dynamic")
     workflows = relationship("Workflow", backref="user_")
     audit_logs = relationship("AuditLog", backref="user_")
+
+    def __init__(self, access_token=None, **kwargs):
+        """Initialize user model."""
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        if access_token:
+            self.access_token = access_token
+
+    @hybrid_property
+    def active_token(self):
+        """."""  # TODO
+        return (self.tokens.filter_by(status='active')
+                .order_by(UserToken.created.desc())).one_or_none()
+
+    @hybrid_property
+    def access_token(self):
+        """."""
+        return self.active_token.token if self.active_token else None
+
+    @access_token.setter
+    def access_token(self, value):
+        """."""
+        from .database import Session
+        user_token = UserToken(user_=self, token=value, status='active')
+        Session.add(user_token)
+        # XXX: Perhaps this shouldn't be done. If session.commit() for user
+        # fails, a UserToken would be created anyhow.
+        Session.commit()
+
+    @hybrid_property
+    def access_token_status(self):
+        """."""
+        return self.active_token.status if self.active_token else None
 
     def __repr__(self):
         """User string represetantion."""
@@ -55,6 +88,18 @@ class User(Base, Timestamp):
         :return: Path to the user's workspace directory.
         """
         return build_workspace_path(self.id_)
+
+
+class UserToken(Base, Timestamp):
+    """."""
+
+    __tablename__ = 'user_token'
+
+    token = Column(String(length=255), primary_key=True, unique=True)
+    status = Column(String(length=255))
+    user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
+    # TODO type
+    # COnstraint type-status(valid)-user
 
 
 class WorkflowStatus(enum.Enum):
