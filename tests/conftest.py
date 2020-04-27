@@ -12,6 +12,7 @@
 from uuid import uuid4
 
 import pytest
+from mock import patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy_utils import create_database, database_exists, drop_database
@@ -61,7 +62,9 @@ def session(db):
 @pytest.fixture
 def new_user(session):
     """Create new user."""
-    user = User(email=f'{uuid4()}@reana.io', access_token='secretkey')
+    with patch('reana_db.database.Session', return_value=session):
+        user = User(email=f'{uuid4()}@reana.io',
+                    access_token=f'secretkey-{uuid4()}')
     session.add(user)
     session.commit()
     return user

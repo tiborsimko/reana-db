@@ -12,9 +12,11 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy
+from mock import patch
 
 from reana_db.models import (ALLOWED_WORKFLOW_STATUS_TRANSITIONS, AuditLog,
-                             AuditLogAction, User, Workflow, WorkflowStatus)
+                             AuditLogAction, User, UserTokenType, Workflow,
+                             WorkflowStatus)
 
 
 def test_workflow_run_number_assignment(db, session):
@@ -123,7 +125,7 @@ def test_workflow_can_transition_to(db, session, from_status, to_status,
     ]
 )
 def test_audit_action(session, new_user, action, can_do):
-    """."""
+    """Test audit log actions creation."""
     details = {'reason': 'Use REANA.'}
 
     def _audit_action():
@@ -144,3 +146,33 @@ def test_audit_action(session, new_user, action, can_do):
     else:
         with pytest.raises(sqlalchemy.exc.IntegrityError):
             _audit_action()
+
+
+def test_access_token(session, new_user):
+    """Test user access token use cases."""
+    assert new_user.access_token
+    assert new_user.access_token_status == 'active'
+    assert new_user.tokens.count() == 1
+    assert new_user.active_token.type_ == UserTokenType.reana
+
+    # Assign second active access token
+    with pytest.raises(Exception) as e:
+        new_user.access_token = 'new_token'
+    assert 'has already an active access token' in e.value.args[0]
+
+    # Revoke token
+    new_user.active_token.status = 'revoked'
+    session.commit()
+    assert not new_user.access_token
+    assert not new_user.active_token
+    assert new_user.access_token_status == 'revoked'
+
+    # Grant new token
+    with patch('reana_db.database.Session', return_value=session):
+        new_user.access_token = 'new_token'
+    session.commit()
+    assert new_user.access_token == 'new_token'
+    assert new_user.tokens.count() == 2
+
+    # Status of most recent access token
+    assert new_user.access_token_status == 'active'

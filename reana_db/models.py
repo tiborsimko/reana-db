@@ -68,7 +68,7 @@ class User(Base, Timestamp):
         """REANA access token setter."""
         from .database import Session
         if self.tokens.count() and self.active_token:
-            raise Exception(f'User {self} has already a valid access token.')
+            raise Exception(f'User {self} has already an active access token.')
         else:
             user_token = UserToken(user_=self, token=value,
                                    status=UserTokenStatus.active,
