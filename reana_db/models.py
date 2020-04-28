@@ -69,11 +69,10 @@ class User(Base, Timestamp):
         from .database import Session
         if self.tokens.count() and self.active_token:
             raise Exception(f'User {self} has already an active access token.')
-        else:
-            user_token = UserToken(user_=self, token=value,
-                                   status=UserTokenStatus.active,
-                                   type_=UserTokenType.reana)
-            Session.add(user_token)
+        user_token = UserToken(user_=self, token=value,
+                               status=UserTokenStatus.active,
+                               type_=UserTokenType.reana)
+        Session.add(user_token)
 
     @hybrid_property
     def access_token_status(self):
@@ -82,16 +81,27 @@ class User(Base, Timestamp):
                               .order_by(UserToken.created.desc())).first()
         return latest_reana_token.status.name if latest_reana_token else None
 
-    def __repr__(self):
-        """User string represetantion."""
-        return '<User %r>' % self.id_
-
     def get_user_workspace(self):
         """Build user's workspace directory path.
 
         :return: Path to the user's workspace directory.
         """
         return build_workspace_path(self.id_)
+
+    def log_action(self, action, details=None):
+        """Create audit log entry for the user.
+
+        :param action: Type of action.
+        :type action: AuditLogAction
+        :param details: JSON field containing action details.
+        """
+        log = AuditLog(user_id=self.id_, action=action, details=details)
+        Session.add(log)
+        Session.commit()
+
+    def __repr__(self):
+        """User string represetantion."""
+        return '<User %r>' % self.id_
 
 
 class UserTokenStatus(enum.Enum):
