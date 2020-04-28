@@ -95,9 +95,11 @@ class User(Base, Timestamp):
         :type action: AuditLogAction
         :param details: JSON field containing action details.
         """
-        log = AuditLog(user_id=self.id_, action=action, details=details)
-        Session.add(log)
+        from .database import Session
+        audit_log = AuditLog(user_id=self.id_, action=action, details=details)
+        Session.add(audit_log)
         Session.commit()
+        return audit_log
 
     def __repr__(self):
         """User string represetantion."""
@@ -380,6 +382,8 @@ class AuditLogAction(enum.Enum):
     """Enumeration of audit log actions."""
 
     request_token = 0
+    grant_token = 1
+    revoke_token = 2
 
 
 class AuditLog(Base, Timestamp):

@@ -129,13 +129,7 @@ def test_audit_action(session, new_user, action, can_do):
     details = {'reason': 'Use REANA.'}
 
     def _audit_action():
-        audited_action = AuditLog(
-            user_id=new_user.id_,
-            action=action,
-            details=details,
-        )
-        session.add(audited_action)
-        session.commit()
+        audited_action = new_user.log_action(action, details)
         return audited_action
 
     if can_do:
