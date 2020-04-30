@@ -15,8 +15,8 @@ import sqlalchemy
 from mock import patch
 
 from reana_db.models import (ALLOWED_WORKFLOW_STATUS_TRANSITIONS, AuditLog,
-                             AuditLogAction, User, UserTokenType, Workflow,
-                             WorkflowStatus)
+                             AuditLogAction, User, UserTokenStatus,
+                             UserTokenType, Workflow, WorkflowStatus)
 
 
 def test_workflow_run_number_assignment(db, session):
@@ -142,10 +142,10 @@ def test_audit_action(session, new_user, action, can_do):
             _audit_action()
 
 
-def test_access_token(session, new_user):
+def test_access_token(db, session, new_user):
     """Test user access token use cases."""
     assert new_user.access_token
-    assert new_user.access_token_status == 'active'
+    assert new_user.access_token_status == UserTokenStatus.active.name
     assert new_user.tokens.count() == 1
     assert new_user.active_token.type_ == UserTokenType.reana
 
@@ -155,18 +155,27 @@ def test_access_token(session, new_user):
     assert 'has already an active access token' in e.value.args[0]
 
     # Revoke token
-    new_user.active_token.status = 'revoked'
+    new_user.active_token.status = UserTokenStatus.revoked.name
     session.commit()
     assert not new_user.access_token
     assert not new_user.active_token
-    assert new_user.access_token_status == 'revoked'
+    assert new_user.access_token_status == UserTokenStatus.revoked.name
+
+    # User requests token
+    new_user.request_access_token()
+    assert not new_user.access_token
+    assert new_user.access_token_status == UserTokenStatus.requested.name
+
+    # Tries to request again
+    with pytest.raises(Exception) as e:
+        new_user.request_access_token()
+    assert 'has already requested an access token' in e.value.args[0]
 
     # Grant new token
-    with patch('reana_db.database.Session', return_value=session):
-        new_user.access_token = 'new_token'
+    new_user.access_token = 'new_token'
     session.commit()
     assert new_user.access_token == 'new_token'
     assert new_user.tokens.count() == 2
 
     # Status of most recent access token
-    assert new_user.access_token_status == 'active'
+    assert new_user.access_token_status == UserTokenStatus.active.name

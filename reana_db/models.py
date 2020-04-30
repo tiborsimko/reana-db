@@ -69,17 +69,28 @@ class User(Base, Timestamp):
         from .database import Session
         if self.tokens.count() and self.active_token:
             raise Exception(f'User {self} has already an active access token.')
-        user_token = UserToken(user_=self, token=value,
-                               status=UserTokenStatus.active,
-                               type_=UserTokenType.reana)
-        Session.add(user_token)
+        if (self.tokens.count() and
+                self.access_token_status == UserTokenStatus.requested.name):
+            self.latest_access_token.status = UserTokenStatus.active
+            self.latest_access_token.token = value
+        else:
+            user_token = UserToken(user_=self, token=value,
+                                   status=UserTokenStatus.active,
+                                   type_=UserTokenType.reana)
+            Session.add(user_token)
+
+    @hybrid_property
+    def latest_access_token(self):
+        """REANA most recent access token."""
+        latest_reana_token = (self.tokens.filter_by(type_=UserTokenType.reana)
+                              .order_by(UserToken.created.desc())).first()
+        return latest_reana_token or None
 
     @hybrid_property
     def access_token_status(self):
         """REANA most recent access token status."""
-        latest_reana_token = (self.tokens.filter_by(type_=UserTokenType.reana)
-                              .order_by(UserToken.created.desc())).first()
-        return latest_reana_token.status.name if latest_reana_token else None
+        return (self.latest_access_token.status.name
+                if self.latest_access_token else None)
 
     def get_user_workspace(self):
         """Build user's workspace directory path.
@@ -87,6 +98,21 @@ class User(Base, Timestamp):
         :return: Path to the user's workspace directory.
         """
         return build_workspace_path(self.id_)
+
+    def request_access_token(self):
+        """Create user token and mark it as requested."""
+        from .database import Session
+        if self.tokens.count() and self.active_token:
+            raise Exception(f'User {self} has already an active access token.')
+        if (self.tokens.count() and
+                self.access_token_status == UserTokenStatus.requested.name):
+            raise Exception(f'User {self} has already requested an access'
+                            ' token.')
+        user_token = UserToken(user_=self, token=None,
+                               status=UserTokenStatus.requested,
+                               type_=UserTokenType.reana)
+        Session.add(user_token)
+        Session.commit()
 
     def log_action(self, action, details=None):
         """Create audit log entry for the user.
@@ -125,7 +151,9 @@ class UserToken(Base, Timestamp):
 
     __tablename__ = 'user_token'
 
-    token = Column(String(length=255), primary_key=True, unique=True)
+    id_ = Column(UUIDType, primary_key=True, unique=True,
+                 default=generate_uuid)
+    token = Column(String(length=255), unique=True)
     status = Column(Enum(UserTokenStatus))
     user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
     type_ = Column(Enum(UserTokenType), nullable=False)
