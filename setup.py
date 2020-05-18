@@ -44,6 +44,7 @@ install_requires = [
     'psycopg2-binary>=2.6.1',
     'SQLAlchemy>=1.2.7',
     'sqlalchemy-utils>=0.31.0',
+    'cryptography>=2.9.2',  # Required by sqlalchemy_utils.EncryptedType
 ]
 
 packages = find_packages()

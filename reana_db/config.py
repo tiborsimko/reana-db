@@ -28,6 +28,9 @@ DB_HOST = os.getenv('REANA_DB_HOST',
 DB_PORT = os.getenv('REANA_DB_PORT', '5432')
 """Database service port."""
 
+DB_SECRET_KEY = os.getenv('REANA_SECRET_KEY', 'reana')
+"""Database encryption secret key."""
+
 SQLALCHEMY_DATABASE_URI = \
     os.getenv(
         'REANA_SQLALCHEMY_DATABASE_URI',

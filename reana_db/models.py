@@ -18,9 +18,11 @@ from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from sqlalchemy_utils import JSONType, UUIDType
+from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
+from reana_db.config import DB_SECRET_KEY
 from reana_db.utils import build_workspace_path
 
 Base = declarative_base()
@@ -153,7 +155,8 @@ class UserToken(Base, Timestamp):
 
     id_ = Column(UUIDType, primary_key=True, unique=True,
                  default=generate_uuid)
-    token = Column(String(length=255), unique=True)
+    token = Column(EncryptedType(String(length=255), DB_SECRET_KEY, AesEngine,
+                                 'pkcs5'), unique=True)
     status = Column(Enum(UserTokenStatus))
     user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
     type_ = Column(Enum(UserTokenType), nullable=False)
