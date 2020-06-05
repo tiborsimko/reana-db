@@ -1,6 +1,18 @@
 Changes
 =======
 
+Version master (UNRELEASED)
+---------------------------
+
+- Encrypts user tokens.
+- Adds initial central workflow status transitions logic.
+- Factors out user tokens from User table to UserToken table.
+- Adds audit table and logic to register actions.
+- Adds new column ``workspace_path`` to the Workflow table.
+- Adds fixtures for better testing models.
+- Amends database host configuration to respect REANA component prefixing.
+- Add Black formatter support.
+
 Version 0.6.0 (2019-12-19)
 --------------------------
 
