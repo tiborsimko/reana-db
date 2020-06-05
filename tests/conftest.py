@@ -24,14 +24,14 @@ from reana_db.models import Base, User
 def db():
     """Initialize database fixture."""
     from reana_db.database import init_db
+
     init_db()
 
 
 @pytest.fixture
 def new_user(session):
     """Create new user."""
-    user = User(email=f'{uuid4()}@reana.io',
-                access_token=f'secretkey-{uuid4()}')
+    user = User(email=f"{uuid4()}@reana.io", access_token=f"secretkey-{uuid4()}")
     session.add(user)
     session.commit()
     return user

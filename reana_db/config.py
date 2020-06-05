@@ -10,33 +10,35 @@
 
 import os
 
-DB_NAME = os.getenv('REANA_DB_NAME', 'reana')
+DB_NAME = os.getenv("REANA_DB_NAME", "reana")
 """Database name."""
 
-DB_USERNAME = os.getenv('REANA_DB_USERNAME', 'reana')
+DB_USERNAME = os.getenv("REANA_DB_USERNAME", "reana")
 """Database user name."""
 
-DB_PASSWORD = os.getenv('REANA_DB_PASSWORD', 'reana')
+DB_PASSWORD = os.getenv("REANA_DB_PASSWORD", "reana")
 """Database password."""
 
-DB_HOST = os.getenv('REANA_DB_HOST',
-                    f'{os.getenv("REANA_COMPONENT_PREFIX")}-db')
+DB_HOST = os.getenv("REANA_DB_HOST", f'{os.getenv("REANA_COMPONENT_PREFIX")}-db')
 """Database service host."""
 # Loading REANA_COMPONENT_PREFIX from environment because REANA-DB
 # doesn't depend on REANA-Commons, the package which loads this config.
 
-DB_PORT = os.getenv('REANA_DB_PORT', '5432')
+DB_PORT = os.getenv("REANA_DB_PORT", "5432")
 """Database service port."""
 
-DB_SECRET_KEY = os.getenv('REANA_SECRET_KEY', 'reana')
+DB_SECRET_KEY = os.getenv("REANA_SECRET_KEY", "reana")
 """Database encryption secret key."""
 
-SQLALCHEMY_DATABASE_URI = \
-    os.getenv(
-        'REANA_SQLALCHEMY_DATABASE_URI',
-        'postgresql+psycopg2://{username}:{password}'
-        '@{host}:{port}/{db}'.format(
-            username=DB_USERNAME, password=DB_PASSWORD, host=DB_HOST,
-            port=DB_PORT, db=DB_NAME
-        ))
+SQLALCHEMY_DATABASE_URI = os.getenv(
+    "REANA_SQLALCHEMY_DATABASE_URI",
+    "postgresql+psycopg2://{username}:{password}"
+    "@{host}:{port}/{db}".format(
+        username=DB_USERNAME,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        db=DB_NAME,
+    ),
+)
 """SQLAlchemy database location."""

@@ -20,7 +20,7 @@ def build_workspace_path(user_id, workflow_id=None):
     :return: String that represents the workspace relative path.
         i.e. users/0000/workflows/0034
     """
-    workspace_path = os.path.join('users', str(user_id), 'workflows')
+    workspace_path = os.path.join("users", str(user_id), "workflows")
     if workflow_id:
         workspace_path = os.path.join(workspace_path, str(workflow_id))
 
@@ -45,21 +45,22 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
     :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
+
     # Check existence
     if not uuid_or_name:
-        raise ValueError('No Workflow was specified.')
+        raise ValueError("No Workflow was specified.")
 
     # Check validity
     try:
-        uuid_or_name.encode('ascii')
+        uuid_or_name.encode("ascii")
     except UnicodeEncodeError:
         # `workflow_name` contains something else than just ASCII.
-        raise ValueError('Workflow name {} is not valid.'.format(uuid_or_name))
+        raise ValueError("Workflow name {} is not valid.".format(uuid_or_name))
 
     # Check if UUIDv4
     try:
         # is_uuid = UUID(uuid_or_name, version=4)
-        is_uuid = UUID('{' + uuid_or_name + '}', version=4)
+        is_uuid = UUID("{" + uuid_or_name + "}", version=4)
     except (TypeError, ValueError):
         is_uuid = None
 
@@ -88,7 +89,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
 
         # Try to split the dot-separated string.
         try:
-            workflow_name, run_number = uuid_or_name.split('.', maxsplit=1)
+            workflow_name, run_number = uuid_or_name.split(".", maxsplit=1)
         except ValueError:
             # Couldn't split. Probably not a dot-separated string.
             #  -> Search with `uuid_or_name`
@@ -116,15 +117,15 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
         workflow = Workflow.query.filter(
             Workflow.name == workflow_name,
             Workflow.run_number == run_number,
-            Workflow.owner_id == user_uuid).\
-            one_or_none()
+            Workflow.owner_id == user_uuid,
+        ).one_or_none()
         if not workflow:
             raise ValueError(
-                'REANA_WORKON is set to {0}, but '
-                'that workflow does not exist. '
-                'Please set your REANA_WORKON environment '
-                'variable appropriately.'.
-                format(workflow_name, run_number))
+                "REANA_WORKON is set to {0}, but "
+                "that workflow does not exist. "
+                "Please set your REANA_WORKON environment "
+                "variable appropriately.".format(workflow_name, run_number)
+            )
 
         return workflow
 
@@ -137,17 +138,21 @@ def _get_workflow_by_name(workflow_name, user_uuid):
     :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
-    workflow = Workflow.query.filter(
-        Workflow.name == workflow_name,
-        Workflow.owner_id == user_uuid). \
-        order_by(Workflow.run_number.desc()).first()
+
+    workflow = (
+        Workflow.query.filter(
+            Workflow.name == workflow_name, Workflow.owner_id == user_uuid
+        )
+        .order_by(Workflow.run_number.desc())
+        .first()
+    )
     if not workflow:
         raise ValueError(
-            'REANA_WORKON is set to {0}, but '
-            'that workflow does not exist. '
-            'Please set your REANA_WORKON environment '
-            'variable appropriately.'.
-            format(workflow_name))
+            "REANA_WORKON is set to {0}, but "
+            "that workflow does not exist. "
+            "Please set your REANA_WORKON environment "
+            "variable appropriately.".format(workflow_name)
+        )
     return workflow
 
 
@@ -160,13 +165,13 @@ def _get_workflow_by_uuid(workflow_uuid):
     :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
-    workflow = Workflow.query.filter(Workflow.id_ ==
-                                     workflow_uuid).first()
+
+    workflow = Workflow.query.filter(Workflow.id_ == workflow_uuid).first()
     if not workflow:
         raise ValueError(
-            'REANA_WORKON is set to {0}, but '
-            'that workflow does not exist. '
-            'Please set your REANA_WORKON environment '
-            'variable appropriately.'.
-            format(workflow_uuid))
+            "REANA_WORKON is set to {0}, but "
+            "that workflow does not exist. "
+            "Please set your REANA_WORKON environment "
+            "variable appropriately.".format(workflow_uuid)
+        )
     return workflow

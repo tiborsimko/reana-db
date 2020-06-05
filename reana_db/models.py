@@ -13,8 +13,17 @@ from __future__ import absolute_import
 import enum
 import uuid
 
-from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
-                        String, Text, UniqueConstraint)
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
@@ -36,10 +45,9 @@ def generate_uuid():
 class User(Base, Timestamp):
     """User table."""
 
-    __tablename__ = 'user_'
+    __tablename__ = "user_"
 
-    id_ = Column(UUIDType, primary_key=True, unique=True,
-                 default=generate_uuid)
+    id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
     email = Column(String(length=255), unique=True, primary_key=True)
     full_name = Column(String(length=255))
     username = Column(String(length=255))
@@ -57,8 +65,9 @@ class User(Base, Timestamp):
     @hybrid_property
     def active_token(self):
         """REANA active access token object."""
-        return self.tokens.filter_by(status=UserTokenStatus.active,
-                                     type_=UserTokenType.reana).one_or_none()
+        return self.tokens.filter_by(
+            status=UserTokenStatus.active, type_=UserTokenType.reana
+        ).one_or_none()
 
     @hybrid_property
     def access_token(self):
@@ -69,30 +78,40 @@ class User(Base, Timestamp):
     def access_token(self, value):
         """REANA access token setter."""
         from .database import Session
+
         if self.tokens.count() and self.active_token:
-            raise Exception(f'User {self} has already an active access token.')
-        if (self.tokens.count() and
-                self.access_token_status == UserTokenStatus.requested.name):
+            raise Exception(f"User {self} has already an active access token.")
+        if (
+            self.tokens.count()
+            and self.access_token_status == UserTokenStatus.requested.name
+        ):
             self.latest_access_token.status = UserTokenStatus.active
             self.latest_access_token.token = value
         else:
-            user_token = UserToken(user_=self, token=value,
-                                   status=UserTokenStatus.active,
-                                   type_=UserTokenType.reana)
+            user_token = UserToken(
+                user_=self,
+                token=value,
+                status=UserTokenStatus.active,
+                type_=UserTokenType.reana,
+            )
             Session.add(user_token)
 
     @hybrid_property
     def latest_access_token(self):
         """REANA most recent access token."""
-        latest_reana_token = (self.tokens.filter_by(type_=UserTokenType.reana)
-                              .order_by(UserToken.created.desc())).first()
+        latest_reana_token = (
+            self.tokens.filter_by(type_=UserTokenType.reana).order_by(
+                UserToken.created.desc()
+            )
+        ).first()
         return latest_reana_token or None
 
     @hybrid_property
     def access_token_status(self):
         """REANA most recent access token status."""
-        return (self.latest_access_token.status.name
-                if self.latest_access_token else None)
+        return (
+            self.latest_access_token.status.name if self.latest_access_token else None
+        )
 
     def get_user_workspace(self):
         """Build user's workspace directory path.
@@ -104,15 +123,20 @@ class User(Base, Timestamp):
     def request_access_token(self):
         """Create user token and mark it as requested."""
         from .database import Session
+
         if self.tokens.count() and self.active_token:
-            raise Exception(f'User {self} has already an active access token.')
-        if (self.tokens.count() and
-                self.access_token_status == UserTokenStatus.requested.name):
-            raise Exception(f'User {self} has already requested an access'
-                            ' token.')
-        user_token = UserToken(user_=self, token=None,
-                               status=UserTokenStatus.requested,
-                               type_=UserTokenType.reana)
+            raise Exception(f"User {self} has already an active access token.")
+        if (
+            self.tokens.count()
+            and self.access_token_status == UserTokenStatus.requested.name
+        ):
+            raise Exception(f"User {self} has already requested an access" " token.")
+        user_token = UserToken(
+            user_=self,
+            token=None,
+            status=UserTokenStatus.requested,
+            type_=UserTokenType.reana,
+        )
         Session.add(user_token)
         Session.commit()
 
@@ -124,6 +148,7 @@ class User(Base, Timestamp):
         :param details: JSON field containing action details.
         """
         from .database import Session
+
         audit_log = AuditLog(user_id=self.id_, action=action, details=details)
         Session.add(audit_log)
         Session.commit()
@@ -131,7 +156,7 @@ class User(Base, Timestamp):
 
     def __repr__(self):
         """User string represetantion."""
-        return '<User %r>' % self.id_
+        return "<User %r>" % self.id_
 
 
 class UserTokenStatus(enum.Enum):
@@ -151,14 +176,15 @@ class UserTokenType(enum.Enum):
 class UserToken(Base, Timestamp):
     """User tokens table."""
 
-    __tablename__ = 'user_token'
+    __tablename__ = "user_token"
 
-    id_ = Column(UUIDType, primary_key=True, unique=True,
-                 default=generate_uuid)
-    token = Column(EncryptedType(String(length=255), DB_SECRET_KEY, AesEngine,
-                                 'pkcs5'), unique=True)
+    id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
+    token = Column(
+        EncryptedType(String(length=255), DB_SECRET_KEY, AesEngine, "pkcs5"),
+        unique=True,
+    )
     status = Column(Enum(UserTokenStatus))
-    user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
+    user_id = Column(UUIDType, ForeignKey("user_.id_"), nullable=False)
     type_ = Column(Enum(UserTokenType), nullable=False)
 
 
@@ -208,12 +234,12 @@ class JobStatus(enum.Enum):
 class Workflow(Base, Timestamp):
     """Workflow table."""
 
-    __tablename__ = 'workflow'
+    __tablename__ = "workflow"
 
     id_ = Column(UUIDType, primary_key=True)
     name = Column(String(255))
     status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
-    owner_id = Column(UUIDType, ForeignKey('user_.id_'))
+    owner_id = Column(UUIDType, ForeignKey("user_.id_"))
     reana_specification = Column(JSONType)
     input_parameters = Column(JSONType)
     operational_options = Column(JSONType)
@@ -225,7 +251,7 @@ class Workflow(Base, Timestamp):
     run_started_at = Column(DateTime)
     run_finished_at = Column(DateTime)
     run_stopped_at = Column(DateTime)
-    _run_number = Column('run_number', Float)
+    _run_number = Column("run_number", Float)
     job_progress = Column(JSONType, default=dict)
     workspace_path = Column(String)
     restart = Column(Boolean, default=False)
@@ -239,28 +265,33 @@ class Workflow(Base, Timestamp):
     git_repo = Column(String(255))
     git_provider = Column(String(255))
 
-    __table_args__ = UniqueConstraint('name', 'owner_id', 'run_number',
-                                      name='_user_workflow_run_uc'),
+    __table_args__ = (
+        UniqueConstraint(
+            "name", "owner_id", "run_number", name="_user_workflow_run_uc"
+        ),
+    )
 
-    def __init__(self,
-                 id_,
-                 name,
-                 owner_id,
-                 reana_specification,
-                 type_,
-                 logs='',
-                 interactive_session=None,
-                 interactive_session_name=None,
-                 interactive_session_type=None,
-                 input_parameters={},
-                 operational_options={},
-                 status=WorkflowStatus.created,
-                 git_ref='',
-                 git_repo=None,
-                 git_provider=None,
-                 workspace_path=None,
-                 restart=False,
-                 run_number=None):
+    def __init__(
+        self,
+        id_,
+        name,
+        owner_id,
+        reana_specification,
+        type_,
+        logs="",
+        interactive_session=None,
+        interactive_session_name=None,
+        interactive_session_type=None,
+        input_parameters={},
+        operational_options={},
+        status=WorkflowStatus.created,
+        git_ref="",
+        git_repo=None,
+        git_provider=None,
+        workspace_path=None,
+        restart=False,
+        run_number=None,
+    ):
         """Initialize workflow model."""
         self.id_ = id_
         self.name = name
@@ -270,7 +301,7 @@ class Workflow(Base, Timestamp):
         self.input_parameters = input_parameters
         self.operational_options = operational_options
         self.type_ = type_
-        self.logs = logs or ''
+        self.logs = logs or ""
         self.interactive_session = interactive_session
         self.interactive_session_name = interactive_session_name
         self.interactive_session_type = interactive_session_type
@@ -280,11 +311,12 @@ class Workflow(Base, Timestamp):
         self.restart = restart
         self._run_number = self.assign_run_number(run_number)
         self.workspace_path = workspace_path or build_workspace_path(
-            self.owner_id, self.id_)
+            self.owner_id, self.id_
+        )
 
     def __repr__(self):
         """Workflow string represetantion."""
-        return '<Workflow %r>' % self.id_
+        return "<Workflow %r>" % self.id_
 
     @hybrid_property
     def run_number(self):
@@ -296,24 +328,32 @@ class Workflow(Base, Timestamp):
     @run_number.expression
     def run_number(cls):
         from sqlalchemy import func
+
         return func.abs(cls._run_number)
 
     def assign_run_number(self, run_number):
         """Assing run number."""
         from .database import Session
+
         if run_number:
-            last_workflow = Session.query(Workflow).filter(
-                Workflow.name == self.name,
-                Workflow.run_number >= int(run_number),
-                Workflow.run_number < int(run_number) + 1,
-                Workflow.owner_id == self.owner_id).\
-                order_by(Workflow.run_number.desc()).first()
+            last_workflow = (
+                Session.query(Workflow)
+                .filter(
+                    Workflow.name == self.name,
+                    Workflow.run_number >= int(run_number),
+                    Workflow.run_number < int(run_number) + 1,
+                    Workflow.owner_id == self.owner_id,
+                )
+                .order_by(Workflow.run_number.desc())
+                .first()
+            )
         else:
-            last_workflow = Session.query(Workflow).filter_by(
-                name=self.name,
-                restart=False,
-                owner_id=self.owner_id).\
-                order_by(Workflow.run_number.desc()).first()
+            last_workflow = (
+                Session.query(Workflow)
+                .filter_by(name=self.name, restart=False, owner_id=self.owner_id)
+                .order_by(Workflow.run_number.desc())
+                .first()
+            )
         if last_workflow and self.restart:
             return round(last_workflow.run_number + 0.1, 1)
         else:
@@ -324,18 +364,18 @@ class Workflow(Base, Timestamp):
 
     def get_input_parameters(self):
         """Return workflow parameters."""
-        return self.reana_specification.get('inputs', {}).get('parameters', {})
+        return self.reana_specification.get("inputs", {}).get("parameters", {})
 
     def get_specification(self):
         """Return workflow specification."""
-        return self.reana_specification['workflow'].get('specification', {})
+        return self.reana_specification["workflow"].get("specification", {})
 
     def get_owner_access_token(self):
         """Return workflow owner access token."""
         from .database import Session
+
         db_session = Session.object_session(self)
-        owner = db_session.query(User).filter_by(
-            id_=self.owner_id).first()
+        owner = db_session.query(User).filter_by(id_=self.owner_id).first()
         return owner.access_token
 
     def get_full_workflow_name(self):
@@ -343,8 +383,9 @@ class Workflow(Base, Timestamp):
         return "{}.{}".format(self.name, str(self.run_number))
 
     @staticmethod
-    def update_workflow_status(db_session, workflow_uuid, status,
-                               new_logs='', message=None):
+    def update_workflow_status(
+        db_session, workflow_uuid, status, new_logs="", message=None
+    ):
         """Update database workflow status.
 
         :param workflow_uuid: UUID which represents the workflow.
@@ -353,16 +394,16 @@ class Workflow(Base, Timestamp):
         :param message: Unused.
         """
         try:
-            workflow = \
-                db_session.query(Workflow).filter_by(id_=workflow_uuid).first()
+            workflow = db_session.query(Workflow).filter_by(id_=workflow_uuid).first()
 
             if not workflow:
-                raise Exception('Workflow {0} doesn\'t exist in database.'.
-                                format(workflow_uuid))
+                raise Exception(
+                    "Workflow {0} doesn't exist in database.".format(workflow_uuid)
+                )
             if status:
                 workflow.status = status
             if new_logs:
-                workflow.logs = (workflow.logs or '') + new_logs + '\n'
+                workflow.logs = (workflow.logs or "") + new_logs + "\n"
             db_session.commit()
         except Exception as e:
             raise e
@@ -376,10 +417,9 @@ class Workflow(Base, Timestamp):
 class Job(Base, Timestamp):
     """Job table."""
 
-    __tablename__ = 'job'
+    __tablename__ = "job"
 
-    id_ = Column(UUIDType, unique=True, primary_key=True,
-                 default=generate_uuid)
+    id_ = Column(UUIDType, unique=True, primary_key=True, default=generate_uuid)
     backend_job_id = Column(String(256))
     workflow_uuid = Column(UUIDType)
     status = Column(Enum(JobStatus), default=JobStatus.created)
@@ -398,11 +438,10 @@ class Job(Base, Timestamp):
 class JobCache(Base, Timestamp):
     """Job Cache table."""
 
-    __tablename__ = 'job_cache'
+    __tablename__ = "job_cache"
 
-    id_ = Column(UUIDType, unique=True, primary_key=True,
-                 default=generate_uuid)
-    job_id = Column(UUIDType, ForeignKey('job.id_'), primary_key=True)
+    id_ = Column(UUIDType, unique=True, primary_key=True, default=generate_uuid)
+    job_id = Column(UUIDType, ForeignKey("job.id_"), primary_key=True)
     parameters = Column(String(1024))
     result_path = Column(String(1024))
     workspace_hash = Column(String(1024))
@@ -420,14 +459,13 @@ class AuditLogAction(enum.Enum):
 class AuditLog(Base, Timestamp):
     """Audit log table."""
 
-    __tablename__ = 'audit_log'
+    __tablename__ = "audit_log"
 
-    id_ = Column(UUIDType, unique=True, primary_key=True,
-                 default=generate_uuid)
-    user_id = Column(UUIDType, ForeignKey('user_.id_'), nullable=False)
+    id_ = Column(UUIDType, unique=True, primary_key=True, default=generate_uuid)
+    user_id = Column(UUIDType, ForeignKey("user_.id_"), nullable=False)
     action = Column(Enum(AuditLogAction), nullable=False)
     details = Column(JSONType)
 
     def __repr__(self):
         """Audit log string representation."""
-        return f'<AuditLog {self.id_} {self.action}>'
+        return f"<AuditLog {self.id_} {self.action}>"

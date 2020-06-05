@@ -19,15 +19,14 @@ from .config import SQLALCHEMY_DATABASE_URI
 from reana_db.models import Base  # isort:skip  # noqa
 
 engine = create_engine(SQLALCHEMY_DATABASE_URI)
-Session = scoped_session(sessionmaker(autocommit=False,
-                                      autoflush=False,
-                                      bind=engine))
+Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base.query = Session.query_property()
 
 
 def init_db():
     """Initialize the DB."""
     import reana_db.models
+
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(bind=engine)
