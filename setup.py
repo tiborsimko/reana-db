@@ -40,8 +40,8 @@ setup_requires = [
 install_requires = [
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=1.2.7",
-    'sqlalchemy-utils>=0.36.3 ; python_version>="3"',
-    'sqlalchemy-utils==0.36.3 ; python_version=="2.7"',
+    'sqlalchemy-utils>=0.35.0 ; python_version>="3"',
+    'sqlalchemy-utils<=0.36.3 ; python_version=="2.7"',
     "cryptography>=2.9.2",  # Required by sqlalchemy_utils.EncryptedType
 ]
 
