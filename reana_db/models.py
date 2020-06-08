@@ -80,7 +80,7 @@ class User(Base, Timestamp):
         from .database import Session
 
         if self.tokens.count() and self.active_token:
-            raise Exception(f"User {self} has already an active access token.")
+            raise Exception("User {} has already an active access token.".format(self))
         if (
             self.tokens.count()
             and self.access_token_status == UserTokenStatus.requested.name
@@ -125,12 +125,14 @@ class User(Base, Timestamp):
         from .database import Session
 
         if self.tokens.count() and self.active_token:
-            raise Exception(f"User {self} has already an active access token.")
+            raise Exception("User {} has already an active access token.".format(self))
         if (
             self.tokens.count()
             and self.access_token_status == UserTokenStatus.requested.name
         ):
-            raise Exception(f"User {self} has already requested an access" " token.")
+            raise Exception(
+                "User {} has already requested an access" " token.".format(self)
+            )
         user_token = UserToken(
             user_=self,
             token=None,
@@ -468,4 +470,4 @@ class AuditLog(Base, Timestamp):
 
     def __repr__(self):
         """Audit log string representation."""
-        return f"<AuditLog {self.id_} {self.action}>"
+        return "<AuditLog {} {}>".format(self.id_, self.action)

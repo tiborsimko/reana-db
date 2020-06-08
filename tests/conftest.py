@@ -31,7 +31,9 @@ def db():
 @pytest.fixture
 def new_user(session):
     """Create new user."""
-    user = User(email=f"{uuid4()}@reana.io", access_token=f"secretkey-{uuid4()}")
+    user = User(
+        email="{}@reana.io".format(uuid4()), access_token="secretkey-{}".format(uuid4())
+    )
     session.add(user)
     session.commit()
     return user
