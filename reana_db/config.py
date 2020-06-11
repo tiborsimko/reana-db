@@ -10,6 +10,8 @@
 
 import os
 
+from reana_commons.config import REANA_INFRASTRUCTURE_COMPONENTS_HOSTNAMES
+
 DB_NAME = os.getenv("REANA_DB_NAME", "reana")
 """Database name."""
 
@@ -19,9 +21,7 @@ DB_USERNAME = os.getenv("REANA_DB_USERNAME", "reana")
 DB_PASSWORD = os.getenv("REANA_DB_PASSWORD", "reana")
 """Database password."""
 
-DB_HOST = os.getenv(
-    "REANA_DB_HOST", "{}-db".format(os.getenv("REANA_COMPONENT_PREFIX"))
-)
+DB_HOST = REANA_INFRASTRUCTURE_COMPONENTS_HOSTNAMES["db"]
 """Database service host."""
 # Loading REANA_COMPONENT_PREFIX from environment because REANA-DB
 # doesn't depend on REANA-Commons, the package which loads this config.

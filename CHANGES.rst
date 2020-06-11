@@ -11,6 +11,8 @@ Version master (UNRELEASED)
 - Adds new column ``workspace_path`` to the Workflow table.
 - Adds fixtures for better testing models.
 - Amends database host configuration to respect REANA component prefixing.
+- Uses centrally configured database service name from REANA-Commons.
+- Adds REANA-Commons as a dependency.
 - Add Black formatter support.
 
 Version 0.6.0 (2019-12-19)
