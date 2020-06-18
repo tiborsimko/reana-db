@@ -38,6 +38,7 @@ setup_requires = [
 ]
 
 install_requires = [
+    "alembic>=1.4.2",
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=1.2.7",
     'sqlalchemy-utils>=0.35.0 ; python_version>="3"',
@@ -64,6 +65,7 @@ setup(
     author_email="info@reana.io",
     url="https://github.com/reanahub/reana-db",
     packages=["reana_db",],
+    entry_points={"console_scripts": ["reana-db=reana_db.cli:cli"],},
     zip_safe=False,
     install_requires=install_requires,
     extras_require=extras_require,
