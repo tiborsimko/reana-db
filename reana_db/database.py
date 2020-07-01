@@ -15,7 +15,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.schema import CreateSchema
 from sqlalchemy_utils import create_database, database_exists
 
-from .config import DB_USERNAME, SQLALCHEMY_DATABASE_URI
+from .config import SQLALCHEMY_DATABASE_URI
 
 from reana_db.models import Base  # isort:skip  # noqa
 
@@ -24,19 +24,11 @@ Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=en
 Base.query = Session.query_property()
 
 
-def _before_create(target, connection, **kwargs):
-    """Create schemas as SQLAlchemy doesn't do it and set 'public' schema as default."""
-    CreateSchema("reana").execute(connection)
-    # Otherwise Invenio tables end up in 'reana' schema.
-    sql = "ALTER ROLE {} SET search_path TO public".format(DB_USERNAME)
-    connection.execute(sql)
-
-
 def init_db():
     """Initialize the DB."""
     import reana_db.models
 
-    event.listen(Base.metadata, "before_create", _before_create)
+    event.listen(Base.metadata, "before_create", CreateSchema("__reana"))
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(bind=engine)

@@ -16,6 +16,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from reana_db.config import SQLALCHEMY_DATABASE_URI
+from reana_db.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -29,12 +30,20 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+def _include_object(object_, name, *args):
+    # We ignore non-reana tables in migrations
+    schema = object_.schema if hasattr(object_, "schema") else object_.table.schema
+    if name == "alembic_version" or schema != "__reana":
+        return False
+    return True
 
 
 def run_migrations_offline():
@@ -54,6 +63,9 @@ def run_migrations_offline():
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table_schema="__reana",
+        include_schemas=True,
+        include_object=_include_object,
     )
 
     with context.begin_transaction():
@@ -76,7 +88,13 @@ def run_migrations_online():
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table_schema="__reana",
+            include_schemas=True,
+            include_object=_include_object,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
