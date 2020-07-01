@@ -46,6 +46,7 @@ class User(Base, Timestamp):
     """User table."""
 
     __tablename__ = "user_"
+    __table_args__ = {"schema": "__reana"}
 
     id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
     email = Column(String(length=255), unique=True, primary_key=True)
@@ -179,14 +180,15 @@ class UserToken(Base, Timestamp):
     """User tokens table."""
 
     __tablename__ = "user_token"
+    __table_args__ = {"schema": "__reana"}
 
-    id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
     token = Column(
         EncryptedType(String(length=255), DB_SECRET_KEY, AesEngine, "pkcs5"),
         unique=True,
     )
     status = Column(Enum(UserTokenStatus))
-    user_id = Column(UUIDType, ForeignKey("user_.id_"), nullable=False)
+    user_id = Column(UUIDType, ForeignKey("__reana.user_.id_"), nullable=False)
     type_ = Column(Enum(UserTokenType), nullable=False)
 
 
@@ -241,7 +243,7 @@ class Workflow(Base, Timestamp):
     id_ = Column(UUIDType, primary_key=True)
     name = Column(String(255))
     status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
-    owner_id = Column(UUIDType, ForeignKey("user_.id_"))
+    owner_id = Column(UUIDType, ForeignKey("__reana.user_.id_"))
     reana_specification = Column(JSONType)
     input_parameters = Column(JSONType)
     operational_options = Column(JSONType)
@@ -271,6 +273,7 @@ class Workflow(Base, Timestamp):
         UniqueConstraint(
             "name", "owner_id", "run_number", name="_user_workflow_run_uc"
         ),
+        {"schema": "__reana"},
     )
 
     def __init__(
@@ -420,8 +423,9 @@ class Job(Base, Timestamp):
     """Job table."""
 
     __tablename__ = "job"
+    __table_args__ = {"schema": "__reana"}
 
-    id_ = Column(UUIDType, unique=True, primary_key=True, default=generate_uuid)
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
     backend_job_id = Column(String(256))
     workflow_uuid = Column(UUIDType)
     status = Column(Enum(JobStatus), default=JobStatus.created)
@@ -441,9 +445,10 @@ class JobCache(Base, Timestamp):
     """Job Cache table."""
 
     __tablename__ = "job_cache"
+    __table_args__ = {"schema": "__reana"}
 
-    id_ = Column(UUIDType, unique=True, primary_key=True, default=generate_uuid)
-    job_id = Column(UUIDType, ForeignKey("job.id_"), primary_key=True)
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
+    job_id = Column(UUIDType, ForeignKey("__reana.job.id_"), primary_key=True)
     parameters = Column(String(1024))
     result_path = Column(String(1024))
     workspace_hash = Column(String(1024))
@@ -462,9 +467,10 @@ class AuditLog(Base, Timestamp):
     """Audit log table."""
 
     __tablename__ = "audit_log"
+    __table_args__ = {"schema": "__reana"}
 
-    id_ = Column(UUIDType, unique=True, primary_key=True, default=generate_uuid)
-    user_id = Column(UUIDType, ForeignKey("user_.id_"), nullable=False)
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
+    user_id = Column(UUIDType, ForeignKey("__reana.user_.id_"), nullable=False)
     action = Column(Enum(AuditLogAction), nullable=False)
     details = Column(JSONType)
 
