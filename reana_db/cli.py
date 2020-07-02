@@ -46,8 +46,8 @@ def alembic_group(ctx):
     "-m", "--message", default=None, help="Message string to use with 'revision'"
 )
 @click.option(
-    "--autogenerate",
-    is_flag=True,
+    "--autogenerate/--no-autogenerate",
+    default=True,
     help=(
         "Populate revision script with candidate "
         "migration operations, based on comparison of "
