@@ -11,14 +11,10 @@
 from uuid import uuid4
 
 import pytest
-import sqlalchemy
-from mock import patch
 
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
-    AuditLog,
     AuditLogAction,
-    User,
     UserTokenStatus,
     UserTokenType,
     Workflow,
@@ -26,14 +22,14 @@ from reana_db.models import (
 )
 
 
-def test_workflow_run_number_assignment(db, session):
+def test_workflow_run_number_assignment(db, session, new_user):
     """Test workflow run number assignment."""
     workflow_name = "workflow"
-    owner_id = str(uuid4())
+
     first_workflow = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
-        owner_id=owner_id,
+        owner_id=new_user.id_,
         reana_specification=[],
         type_="serial",
         logs="",
@@ -44,7 +40,7 @@ def test_workflow_run_number_assignment(db, session):
     second_workflow = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
-        owner_id=owner_id,
+        owner_id=new_user.id_,
         reana_specification=[],
         type_="serial",
         logs="",
@@ -55,7 +51,7 @@ def test_workflow_run_number_assignment(db, session):
     first_workflow_restart = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
-        owner_id=owner_id,
+        owner_id=new_user.id_,
         reana_specification=[],
         type_="serial",
         logs="",
@@ -68,7 +64,7 @@ def test_workflow_run_number_assignment(db, session):
     first_workflow_second_restart = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
-        owner_id=owner_id,
+        owner_id=new_user.id_,
         reana_specification=[],
         type_="serial",
         logs="",
@@ -106,15 +102,14 @@ def test_workflow_run_number_assignment(db, session):
     + [tuple + (True,) for tuple in ALLOWED_WORKFLOW_STATUS_TRANSITIONS],
 )
 def test_workflow_can_transition_to(
-    db, session, from_status, to_status, can_transition
+    db, session, from_status, to_status, can_transition, new_user
 ):
     """Test workflow run number assignment."""
     workflow_name = "test-workflow"
-    owner_id = str(uuid4())
     workflow = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
-        owner_id=owner_id,
+        owner_id=new_user.id_,
         reana_specification=[],
         type_="serial",
         logs="",
@@ -148,7 +143,7 @@ def test_audit_action(session, new_user, action, can_do):
         )
         assert audited_action.details == details
     else:
-        with pytest.raises(sqlalchemy.exc.IntegrityError):
+        with pytest.raises(Exception):
             _audit_action()
 
 

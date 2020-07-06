@@ -12,12 +12,8 @@
 from uuid import uuid4
 
 import pytest
-from mock import patch
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy_utils import create_database, database_exists, drop_database
 
-from reana_db.models import Base, User
+from reana_db.models import User
 
 
 @pytest.fixture(scope="module")

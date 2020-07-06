@@ -14,6 +14,9 @@ language: python
 cache:
   - pip
 
+services:
+  - docker
+
 matrix:
   fast_finish: true
   include:
