@@ -53,7 +53,7 @@ class User(Base, Timestamp):
     full_name = Column(String(length=255))
     username = Column(String(length=255))
     tokens = relationship("UserToken", backref="user_", lazy="dynamic")
-    workflows = relationship("Workflow", backref="user_")
+    workflows = relationship("Workflow", backref="user_", lazy="dynamic")
     audit_logs = relationship("AuditLog", backref="user_")
 
     def __init__(self, access_token=None, **kwargs):
