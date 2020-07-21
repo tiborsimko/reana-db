@@ -41,6 +41,13 @@ def alembic_group(ctx):
     ctx.obj = config
 
 
+@alembic_group.command(name="init")
+@click.pass_obj
+def alembic_init(config):
+    """Populate 'alembic_version' table with existing revisions."""
+    command.stamp(config, "head")
+
+
 @alembic_group.command()
 @click.option(
     "-m", "--message", default=None, help="Message string to use with 'revision'"
