@@ -28,7 +28,9 @@ def init_db():
     """Initialize the DB."""
     import reana_db.models
 
-    event.listen(Base.metadata, "before_create", CreateSchema("__reana"))
+    reana_schema_name = "__reana"
+    if not engine.dialect.has_schema(engine, reana_schema_name):
+        event.listen(Base.metadata, "before_create", CreateSchema(reana_schema_name))
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(bind=engine)
