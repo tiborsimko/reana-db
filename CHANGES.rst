@@ -14,6 +14,7 @@ Version master (UNRELEASED)
 - Uses centrally configured database service name from REANA-Commons.
 - Adds REANA-Commons as a dependency.
 - Add Black formatter support.
+- Add disk usage retreival methods to user and workflow models. 
 
 Version 0.6.0 (2019-12-19)
 --------------------------

@@ -34,6 +34,8 @@ from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 from reana_db.config import DB_SECRET_KEY
 from reana_db.utils import build_workspace_path
 
+from reana_commons.utils import get_disk_usage
+
 Base = declarative_base()
 
 
@@ -120,6 +122,15 @@ class User(Base, Timestamp):
         :return: Path to the user's workspace directory.
         """
         return build_workspace_path(self.id_)
+
+    def get_user_disk_usage(self, block_size=None):
+        """Retrieve user disk usage information."""
+        try:
+            workspace_path = self.get_user_workspace()
+            disk_usage = get_disk_usage(workspace_path, True, block_size)
+            return disk_usage[0]["size"]
+        except Exception:
+            return -1
 
     def request_access_token(self):
         """Create user token and mark it as requested."""
@@ -386,6 +397,10 @@ class Workflow(Base, Timestamp):
     def get_full_workflow_name(self):
         """Return full workflow name including run number."""
         return "{}.{}".format(self.name, str(self.run_number))
+
+    def get_workspace_disk_usage(self, summarize=False, block_size=None):
+        """Retrieve disk usage information of a workspace."""
+        return get_disk_usage(self.workspace_path, summarize, block_size)
 
     @staticmethod
     def update_workflow_status(
