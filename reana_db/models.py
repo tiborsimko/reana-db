@@ -20,6 +20,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    BigInteger,
     String,
     Text,
     UniqueConstraint,
@@ -492,3 +493,66 @@ class AuditLog(Base, Timestamp):
     def __repr__(self):
         """Audit log string representation."""
         return "<AuditLog {} {}>".format(self.id_, self.action)
+
+
+class ResourceType(enum.Enum):
+    """Enumeration of resource types."""
+
+    cpu = 0
+    gpu = 1
+    disk = 2
+
+
+class ResourceUnit(enum.Enum):
+    """Enumeration of resource usage units."""
+
+    bytes_ = 0
+    milliseconds = 1
+
+
+class Resource(Base, Timestamp):
+    """Resource table."""
+
+    __tablename__ = "resource"
+    __table_args__ = {"schema": "__reana"}
+
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
+    name = Column(String(1024))
+    type_ = Column(Enum(ResourceType), nullable=False)
+    unit = Column(Enum(ResourceUnit), nullable=False)
+    title = Column(String(1024))
+
+    def __repr__(self):
+        """Resource string representation."""
+        return "<Resource {}>".format(self.id_)
+
+
+class UserResource(Base, Timestamp):
+    """User Resource table."""
+
+    __tablename__ = "user_resource"
+    __table_args__ = {"schema": "__reana"}
+
+    user_id = Column(UUIDType, ForeignKey("__reana.user_.id_"), primary_key=True)
+    resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
+    quota_limit = Column(BigInteger())
+    quota_used = Column(BigInteger())
+
+    def __repr__(self):
+        """User Resource string representation."""
+        return "<UserResource {} {}>".format(self.user_id, self.resource_id)
+
+
+class WorkflowResource(Base, Timestamp):
+    """Workflow Resource table."""
+
+    __tablename__ = "workflow_resource"
+    __table_args__ = {"schema": "__reana"}
+
+    workflow_id = Column(UUIDType, ForeignKey("__reana.workflow.id_"), primary_key=True)
+    resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
+    quantity_used = Column(BigInteger())
+
+    def __repr__(self):
+        """Workflow Resource string representation."""
+        return "<WorkflowResource {} {}>".format(self.workflow_id, self.resource_id)
