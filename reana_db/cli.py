@@ -9,12 +9,14 @@
 """REANA DB command line."""
 
 import os
+import sys
 
+import click
 from alembic import command
 from alembic import config as alembic_config
-import click
-
+from reana_db.config import DEFAULT_QUOTA_RESOURCES
 from reana_db.database import init_db
+from reana_db.models import Resource, ResourceType, ResourceUnit
 
 
 @click.group()
@@ -197,3 +199,44 @@ def history(config, rev_range, verbose, indicate_current):
     command.history(
         config, rev_range=rev_range, verbose=verbose, indicate_current=indicate_current
     )
+
+
+@cli.group("quota")
+@click.pass_context
+def quota_group(ctx):
+    """REANA DB quota related commands."""
+
+
+@quota_group.command()
+def create_default_resources():
+    """Create default quota resources."""
+    from reana_db.database import Session
+
+    resource_type_to_unit = {
+        ResourceType.cpu: ResourceUnit.milliseconds,
+        ResourceType.disk: ResourceUnit.bytes_,
+    }
+
+    existing_resources = [r.name for r in Resource.query.all()]
+    default_resources = []
+    for type_, name in DEFAULT_QUOTA_RESOURCES.items():
+        if name not in existing_resources:
+            default_resources.append(
+                Resource(
+                    name=name,
+                    type_=ResourceType[type_],
+                    unit=resource_type_to_unit[ResourceType[type_]],
+                    title=f"Default {type_} resource.",
+                )
+            )
+    if default_resources:
+        Session.add_all(default_resources)
+        Session.commit()
+        click.secho(
+            f"Added resources: {[r.name for r in default_resources]}", fg="green"
+        )
+    else:
+        click.secho(
+            "No action to be taken: default resources already exist.", fg="yellow"
+        )
+        sys.exit(1)

@@ -9,11 +9,22 @@
 """Pytest configuration for REANA-DB."""
 
 
+from datetime import datetime
+from time import sleep
 from uuid import uuid4
 
 import pytest
 
-from reana_db.models import User
+from reana_db.config import DEFAULT_QUOTA_RESOURCES
+from reana_db.models import (
+    Resource,
+    ResourceType,
+    ResourceUnit,
+    User,
+    UserResource,
+    Workflow,
+    WorkflowStatus,
+)
 
 
 @pytest.fixture(scope="module")
@@ -33,3 +44,51 @@ def new_user(session):
     session.add(user)
     session.commit()
     return user
+
+
+@pytest.fixture()
+def cpu_resource(session):
+    """CPU resource."""
+    cpu_res_name = DEFAULT_QUOTA_RESOURCES[ResourceType.cpu.name]
+    cpu_res = Resource.query.filter_by(name=cpu_res_name).first()
+    if not cpu_res:
+        cpu_res = Resource(
+            id_=uuid4(),
+            name=cpu_res_name,
+            type_=ResourceType.cpu,
+            unit=ResourceUnit.milliseconds,
+            title="Default test CPU",
+        )
+        session.merge(cpu_res)
+        session.commit()
+    return cpu_res
+
+
+@pytest.fixture
+def run_workflow(session, new_user):
+    """Mocked workflow run factory."""
+
+    def _run_workflow(time_elapsed_seconds=0.5):
+        """Mock a workflow run."""
+        now = datetime.now()
+        id_ = uuid4()
+        workflow = Workflow(
+            id_=str(id_),
+            name=f"test_{id_}",
+            owner_id=new_user.id_,
+            reana_specification=[],
+            type_="serial",
+            logs="",
+            status=WorkflowStatus.created,
+        )
+        # start workflow
+        workflow.status = WorkflowStatus.running
+        workflow.run_started_at = now
+        session.add(workflow)
+        session.commit()
+        # simulate time elapsed
+        sleep(time_elapsed_seconds)
+        Workflow.update_workflow_status(session, workflow.id_, WorkflowStatus.finished)
+        return workflow
+
+    return _run_workflow

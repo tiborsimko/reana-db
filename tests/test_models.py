@@ -18,6 +18,7 @@ from reana_db.models import (
     UserTokenStatus,
     UserTokenType,
     Workflow,
+    WorkflowResource,
     WorkflowStatus,
 )
 
@@ -184,3 +185,27 @@ def test_access_token(db, session, new_user):
 
     # Status of most recent access token
     assert new_user.access_token_status == UserTokenStatus.active.name
+
+
+def test_workflow_cpu_quota_usage_update(db, session, cpu_resource, run_workflow):
+    """Test quota usage update once workflow is finished/stopped/failed."""
+    time_elapsed_seconds = 0.5
+    workflow = run_workflow(time_elapsed_seconds=time_elapsed_seconds)
+    cpu_milliseconds = (
+        WorkflowResource.query.filter_by(
+            workflow_id=workflow.id_, resource_id=cpu_resource.id_
+        )
+        .first()
+        .quantity_used
+    )
+    assert cpu_milliseconds >= time_elapsed_seconds * 1000
+
+
+def test_user_cpu_usage(db, session, new_user, run_workflow, cpu_resource):
+    """Test aggregated CPU usage per user."""
+    time_elapsed_seconds = 0.5
+    num_workflows = 2
+    for n in range(num_workflows):
+        run_workflow(time_elapsed_seconds=time_elapsed_seconds)
+
+    assert new_user.get_user_cpu_usage() >= num_workflows * time_elapsed_seconds * 1000

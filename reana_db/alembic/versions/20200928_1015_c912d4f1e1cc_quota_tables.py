@@ -24,7 +24,7 @@ def upgrade():
         sa.Column("created", sa.DateTime(), nullable=False),
         sa.Column("updated", sa.DateTime(), nullable=False),
         sa.Column("id_", sqlalchemy_utils.types.uuid.UUIDType(), nullable=False),
-        sa.Column("name", sa.String(length=1024), nullable=True),
+        sa.Column("name", sa.String(length=1024), unique=True, nullable=False),
         sa.Column(
             "type_", sa.Enum("cpu", "gpu", "disk", name="resourcetype"), nullable=False
         ),

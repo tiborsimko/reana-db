@@ -12,18 +12,25 @@ from __future__ import absolute_import
 
 import enum
 import uuid
+from datetime import datetime
 
+from reana_commons.utils import get_disk_usage
+from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_RESOURCES
+from reana_db.utils import build_workspace_path
+from requests.sessions import session
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
     DateTime,
     Enum,
     Float,
     ForeignKey,
-    BigInteger,
     String,
     Text,
     UniqueConstraint,
+    event,
+    func,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -31,11 +38,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
-
-from reana_db.config import DB_SECRET_KEY
-from reana_db.utils import build_workspace_path
-
-from reana_commons.utils import get_disk_usage
 
 Base = declarative_base()
 
@@ -58,6 +60,7 @@ class User(Base, Timestamp):
     tokens = relationship("UserToken", backref="user_", lazy="dynamic")
     workflows = relationship("Workflow", backref="user_", lazy="dynamic")
     audit_logs = relationship("AuditLog", backref="user_")
+    resources = relationship("UserResource", backref="user_")
 
     def __init__(self, access_token=None, **kwargs):
         """Initialize user model."""
@@ -65,6 +68,7 @@ class User(Base, Timestamp):
             setattr(self, k, v)
         if access_token:
             self.access_token = access_token
+        self.initialize_user_quota_limits()
 
     @hybrid_property
     def active_token(self):
@@ -133,6 +137,28 @@ class User(Base, Timestamp):
         except Exception:
             return -1
 
+    def get_user_cpu_usage(self):
+        """Aggregate user CPU usage."""
+        try:
+            from .database import Session
+
+            cpu_resources = [
+                str(res[0])
+                for res in Session.query(Resource.id_)
+                .filter_by(type_=ResourceType.cpu)
+                .all()
+            ]
+            return (
+                Session.query(func.sum(UserResource.quota_used))
+                .filter(
+                    UserResource.resource_id.in_(cpu_resources),
+                    UserResource.user_id == self.id_,
+                )
+                .scalar()
+            )
+        except Exception:
+            return -1
+
     def request_access_token(self):
         """Create user token and mark it as requested."""
         from .database import Session
@@ -168,6 +194,19 @@ class User(Base, Timestamp):
         Session.add(audit_log)
         Session.commit()
         return audit_log
+
+    def initialize_user_quota_limits(self):
+        """Initialize user quota limits."""
+        resources = Resource.query.all()
+        for resource in resources:
+            self.resources.append(
+                UserResource(
+                    user_id=self.id_,
+                    resource_id=resource.id_,
+                    quota_limit=0,
+                    quota_used=0,
+                )
+            )
 
     def __repr__(self):
         """User string represetantion."""
@@ -344,8 +383,6 @@ class Workflow(Base, Timestamp):
 
     @run_number.expression
     def run_number(cls):
-        from sqlalchemy import func
-
         return func.abs(cls._run_number)
 
     def assign_run_number(self, run_number):
@@ -435,6 +472,44 @@ class Workflow(Base, Timestamp):
         return current_transition in ALLOWED_WORKFLOW_STATUS_TRANSITIONS
 
 
+@event.listens_for(Workflow.status, "set")
+def workflow_status_change_listener(workflow, new_status, old_status, initiator):
+    """Workflow status change listener."""
+    if new_status in [
+        WorkflowStatus.finished,
+        WorkflowStatus.failed,
+    ]:
+        workflow.run_finished_at = datetime.now()
+    elif new_status in [WorkflowStatus.stopped]:
+        workflow.run_stopped_at = datetime.now()
+    elif new_status in [WorkflowStatus.running]:
+        workflow.run_started_at = datetime.now()
+
+    finished_at = workflow.run_finished_at or workflow.run_stopped_at
+    if workflow.run_started_at and finished_at:
+        cpu_time = finished_at - workflow.run_started_at
+        cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
+        cpu_resource = Resource.query.filter_by(
+            name=DEFAULT_QUOTA_RESOURCES["cpu"]
+        ).one_or_none()
+        if cpu_resource:
+            from .database import Session
+
+            workflow_resource = WorkflowResource(
+                workflow_id=workflow.id_,
+                resource_id=cpu_resource.id_,
+                quantity_used=cpu_milliseconds,
+            )
+            user_resource_quota = UserResource.query.filter_by(
+                user_id=workflow.owner_id, resource_id=cpu_resource.id_
+            ).first()
+            user_resource_quota.quota_used += cpu_milliseconds
+            Session.add(workflow_resource)
+            Session.commit()
+
+    return new_status
+
+
 class Job(Base, Timestamp):
     """Job table."""
 
@@ -499,8 +574,7 @@ class ResourceType(enum.Enum):
     """Enumeration of resource types."""
 
     cpu = 0
-    gpu = 1
-    disk = 2
+    disk = 1
 
 
 class ResourceUnit(enum.Enum):
@@ -517,7 +591,7 @@ class Resource(Base, Timestamp):
     __table_args__ = {"schema": "__reana"}
 
     id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
-    name = Column(String(1024))
+    name = Column(String(1024), unique=True, nullable=False)
     type_ = Column(Enum(ResourceType), nullable=False)
     unit = Column(Enum(ResourceUnit), nullable=False)
     title = Column(String(1024))

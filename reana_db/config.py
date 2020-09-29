@@ -44,3 +44,10 @@ SQLALCHEMY_DATABASE_URI = os.getenv(
     ),
 )
 """SQLAlchemy database location."""
+
+
+DEFAULT_QUOTA_RESOURCES = {
+    "cpu": "processing time",
+    "disk": "shared storage",
+}
+"""Default quota resources to fill Resource table."""
