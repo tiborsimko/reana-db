@@ -290,6 +290,58 @@ class JobStatus(enum.Enum):
     queued = 5
 
 
+class UserWorkflowSession(Base, Timestamp):
+    """User Workflow Session table."""
+
+    __tablename__ = "user_workflow_session"
+    __table_args__ = {"schema": "__reana"}
+
+    user_id = Column(UUIDType, ForeignKey("__reana.user_.id_"), nullable=False)
+    workflow_id = Column(UUIDType, ForeignKey("__reana.workflow.id_"), nullable=True)
+    session_id = Column(
+        UUIDType, ForeignKey("__reana.interactive_session.id_"), primary_key=True
+    )
+
+    def __repr__(self):
+        """User Workflow Session string representation."""
+        return "<UserWorkflowSession {} {} {}>".format(
+            self.user_id, self.session_id, self.workflow_id
+        )
+
+
+class InteractiveSessionType(enum.Enum):
+    """Enumeration of interactive session types."""
+
+    jupyter = 0
+
+
+class InteractiveSession(Base, Timestamp):
+    """Interactive Session table."""
+
+    __tablename__ = "interactive_session"
+    id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
+    name = Column(String(255))
+    path = Column(Text)  # path to access the interactive session
+    status = Column(
+        Enum(WorkflowStatus), nullable=False, default=WorkflowStatus.created
+    )
+    owner_id = Column(UUIDType, ForeignKey("__reana.user_.id_"))
+    type_ = Column(
+        Enum(InteractiveSessionType),
+        nullable=False,
+        default=InteractiveSessionType.jupyter,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("name", "path", name="_interactive_session_uc"),
+        {"schema": "__reana"},
+    )
+
+    def __repr__(self):
+        """Interactive Session string represetantion."""
+        return "<InteractiveSession %r>" % self.name
+
+
 class Workflow(Base, Timestamp):
     """Workflow table."""
 
@@ -303,9 +355,6 @@ class Workflow(Base, Timestamp):
     input_parameters = Column(JSONType)
     operational_options = Column(JSONType)
     type_ = Column(String(30))
-    interactive_session = Column(Text)
-    interactive_session_name = Column(Text)
-    interactive_session_type = Column(Text)
     logs = Column(String)
     run_started_at = Column(DateTime)
     run_finished_at = Column(DateTime)
@@ -340,9 +389,6 @@ class Workflow(Base, Timestamp):
         reana_specification,
         type_,
         logs="",
-        interactive_session=None,
-        interactive_session_name=None,
-        interactive_session_type=None,
         input_parameters={},
         operational_options={},
         status=WorkflowStatus.created,
@@ -363,9 +409,6 @@ class Workflow(Base, Timestamp):
         self.operational_options = operational_options
         self.type_ = type_
         self.logs = logs or ""
-        self.interactive_session = interactive_session
-        self.interactive_session_name = interactive_session_name
-        self.interactive_session_type = interactive_session_type
         self.git_ref = git_ref
         self.git_repo = git_repo
         self.git_provider = git_provider
