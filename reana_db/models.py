@@ -137,27 +137,16 @@ class User(Base, Timestamp):
         except Exception:
             return -1
 
-    def get_user_cpu_usage(self):
-        """Aggregate user CPU usage."""
-        try:
-            from .database import Session
+    def get_user_quota_by_type(self, resource_type):
+        """Aggregate user quota usage by resource type."""
+        quota_usage = 0
+        quota_limit = 0
+        for user_resource in self.resources:
+            if user_resource.resource.type_ == resource_type:
+                quota_usage += user_resource.quota_used
+                quota_limit += user_resource.quota_limit
 
-            cpu_resources = [
-                str(res[0])
-                for res in Session.query(Resource.id_)
-                .filter_by(type_=ResourceType.cpu)
-                .all()
-            ]
-            return (
-                Session.query(func.sum(UserResource.quota_used))
-                .filter(
-                    UserResource.resource_id.in_(cpu_resources),
-                    UserResource.user_id == self.id_,
-                )
-                .scalar()
-            )
-        except Exception:
-            return -1
+        return {"usage": quota_usage, "limit": quota_limit}
 
     def request_access_token(self):
         """Create user token and mark it as requested."""
@@ -207,6 +196,16 @@ class User(Base, Timestamp):
                     quota_used=0,
                 )
             )
+
+    def get_quota_usage(self):
+        """Get user quota usage information."""
+        return dict(
+            disk=dict(
+                usage=self.get_user_disk_usage(),
+                limit=self.get_user_quota_by_type(ResourceType.disk)["limit"],
+            ),
+            cpu=self.get_user_quota_by_type(ResourceType.cpu),
+        )
 
     def __repr__(self):
         """User string represetantion."""
@@ -600,6 +599,34 @@ class Resource(Base, Timestamp):
         """Resource string representation."""
         return "<Resource {}>".format(self.id_)
 
+    @staticmethod
+    def initialise_default_resources():
+        """Initialise default Resources."""
+        from reana_db.database import Session
+
+        existing_resources = [r.name for r in Resource.query.all()]
+        default_resources = []
+        resource_type_to_unit = {
+            ResourceType.cpu: ResourceUnit.milliseconds,
+            ResourceType.disk: ResourceUnit.bytes_,
+        }
+        for type_, name in DEFAULT_QUOTA_RESOURCES.items():
+            if name not in existing_resources:
+                default_resources.append(
+                    Resource(
+                        name=name,
+                        type_=ResourceType[type_],
+                        unit=resource_type_to_unit[ResourceType[type_]],
+                        title=f"Default {type_} resource.",
+                    )
+                )
+
+        if default_resources:
+            Session.add_all(default_resources)
+            Session.commit()
+
+        return default_resources
+
 
 class UserResource(Base, Timestamp):
     """User Resource table."""
@@ -611,6 +638,8 @@ class UserResource(Base, Timestamp):
     resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
     quota_limit = Column(BigInteger())
     quota_used = Column(BigInteger())
+    user = relationship("User", backref="user_resource")
+    resource = relationship("Resource", backref="user_resource")
 
     def __repr__(self):
         """User Resource string representation."""

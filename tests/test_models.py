@@ -12,9 +12,11 @@ from uuid import uuid4
 
 import pytest
 
+from reana_db.config import DEFAULT_QUOTA_RESOURCES
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
+    Resource,
     UserTokenStatus,
     UserTokenType,
     Workflow,
@@ -187,10 +189,13 @@ def test_access_token(db, session, new_user):
     assert new_user.access_token_status == UserTokenStatus.active.name
 
 
-def test_workflow_cpu_quota_usage_update(db, session, cpu_resource, run_workflow):
+def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
     time_elapsed_seconds = 0.5
     workflow = run_workflow(time_elapsed_seconds=time_elapsed_seconds)
+    cpu_resource = Resource.query.filter_by(
+        name=DEFAULT_QUOTA_RESOURCES["cpu"]
+    ).one_or_none()
     cpu_milliseconds = (
         WorkflowResource.query.filter_by(
             workflow_id=workflow.id_, resource_id=cpu_resource.id_
@@ -201,11 +206,14 @@ def test_workflow_cpu_quota_usage_update(db, session, cpu_resource, run_workflow
     assert cpu_milliseconds >= time_elapsed_seconds * 1000
 
 
-def test_user_cpu_usage(db, session, new_user, run_workflow, cpu_resource):
+def test_user_cpu_usage(db, session, new_user, run_workflow):
     """Test aggregated CPU usage per user."""
     time_elapsed_seconds = 0.5
     num_workflows = 2
     for n in range(num_workflows):
         run_workflow(time_elapsed_seconds=time_elapsed_seconds)
 
-    assert new_user.get_user_cpu_usage() >= num_workflows * time_elapsed_seconds * 1000
+    assert (
+        new_user.get_quota_usage()["cpu"]["usage"]
+        >= num_workflows * time_elapsed_seconds * 1000
+    )

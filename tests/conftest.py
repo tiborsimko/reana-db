@@ -33,6 +33,7 @@ def db():
     from reana_db.database import init_db
 
     init_db()
+    Resource.initialise_default_resources()
 
 
 @pytest.fixture
@@ -44,24 +45,6 @@ def new_user(session):
     session.add(user)
     session.commit()
     return user
-
-
-@pytest.fixture()
-def cpu_resource(session):
-    """CPU resource."""
-    cpu_res_name = DEFAULT_QUOTA_RESOURCES[ResourceType.cpu.name]
-    cpu_res = Resource.query.filter_by(name=cpu_res_name).first()
-    if not cpu_res:
-        cpu_res = Resource(
-            id_=uuid4(),
-            name=cpu_res_name,
-            type_=ResourceType.cpu,
-            unit=ResourceUnit.milliseconds,
-            title="Default test CPU",
-        )
-        session.merge(cpu_res)
-        session.commit()
-    return cpu_res
 
 
 @pytest.fixture
@@ -83,7 +66,6 @@ def run_workflow(session, new_user):
         )
         # start workflow
         workflow.status = WorkflowStatus.running
-        workflow.run_started_at = now
         session.add(workflow)
         session.commit()
         # simulate time elapsed

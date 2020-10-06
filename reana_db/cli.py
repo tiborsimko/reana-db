@@ -14,9 +14,8 @@ import sys
 import click
 from alembic import command
 from alembic import config as alembic_config
-from reana_db.config import DEFAULT_QUOTA_RESOURCES
 from reana_db.database import init_db
-from reana_db.models import Resource, ResourceType, ResourceUnit
+from reana_db.models import Resource
 
 
 @click.group()
@@ -210,30 +209,10 @@ def quota_group(ctx):
 @quota_group.command()
 def create_default_resources():
     """Create default quota resources."""
-    from reana_db.database import Session
-
-    resource_type_to_unit = {
-        ResourceType.cpu: ResourceUnit.milliseconds,
-        ResourceType.disk: ResourceUnit.bytes_,
-    }
-
-    existing_resources = [r.name for r in Resource.query.all()]
-    default_resources = []
-    for type_, name in DEFAULT_QUOTA_RESOURCES.items():
-        if name not in existing_resources:
-            default_resources.append(
-                Resource(
-                    name=name,
-                    type_=ResourceType[type_],
-                    unit=resource_type_to_unit[ResourceType[type_]],
-                    title=f"Default {type_} resource.",
-                )
-            )
-    if default_resources:
-        Session.add_all(default_resources)
-        Session.commit()
+    created_resources = Resource.initialise_default_resources()
+    if created_resources:
         click.secho(
-            f"Added resources: {[r.name for r in default_resources]}", fg="green"
+            f"Created resources: {[r.name for r in created_resources]}", fg="green"
         )
     else:
         click.secho(
