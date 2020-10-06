@@ -139,6 +139,19 @@ class User(Base, Timestamp):
 
     def get_user_quota_by_type(self, resource_type):
         """Aggregate user quota usage by resource type."""
+
+        def _get_health_status(usage, limit):
+            """Calculate quota health status."""
+            health = QuotaHealth.healthy
+            if limit:
+                percentage = usage / limit * 100
+                if percentage >= 60:
+                    if percentage >= 85:
+                        health = QuotaHealth.critical
+                    else:
+                        health = QuotaHealth.warning
+            return health.name
+
         quota_usage = 0
         quota_limit = 0
         for user_resource in self.resources:
@@ -146,7 +159,11 @@ class User(Base, Timestamp):
                 quota_usage += user_resource.quota_used
                 quota_limit += user_resource.quota_limit
 
-        return {"usage": quota_usage, "limit": quota_limit}
+        return {
+            "usage": quota_usage,
+            "limit": quota_limit,
+            "health": _get_health_status(quota_usage, quota_limit),
+        }
 
     def request_access_token(self):
         """Create user token and mark it as requested."""
@@ -203,6 +220,7 @@ class User(Base, Timestamp):
             disk=dict(
                 usage=self.get_user_disk_usage(),
                 limit=self.get_user_quota_by_type(ResourceType.disk)["limit"],
+                health=self.get_user_quota_by_type(ResourceType.disk)["health"],
             ),
             cpu=self.get_user_quota_by_type(ResourceType.cpu),
         )
@@ -659,3 +677,11 @@ class WorkflowResource(Base, Timestamp):
     def __repr__(self):
         """Workflow Resource string representation."""
         return "<WorkflowResource {} {}>".format(self.workflow_id, self.resource_id)
+
+
+class QuotaHealth(enum.Enum):
+    """Enumeration of quota health statuses."""
+
+    healthy = 0
+    warning = 1
+    critical = 2
