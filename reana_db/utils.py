@@ -175,3 +175,38 @@ def _get_workflow_by_uuid(workflow_uuid):
             "variable appropriately.".format(workflow_uuid)
         )
     return workflow
+
+
+def update_users_disk_quota(user=None):
+    """Update users disk quota usage.
+
+    :param user: User whose disk quota will be updated. If None, applies to all users.
+    :type user: reana_db.models.User
+
+    """
+    from reana_commons.utils import get_disk_usage
+
+    from reana_db.config import DEFAULT_QUOTA_RESOURCES
+    from reana_db.models import Resource, User, UserResource
+
+    users = [user] if user else User.query.all()
+
+    for u in users:
+        workspace_path = u.get_user_workspace()
+        disk_usage_bytes = get_disk_usage(
+            workspace_path, summarize=True, block_size="b"
+        )
+        disk_usage_bytes = int(disk_usage_bytes[0]["size"])
+
+        disk_resource = Resource.query.filter_by(
+            name=DEFAULT_QUOTA_RESOURCES["disk"]
+        ).one_or_none()
+
+        if disk_resource:
+            from .database import Session
+
+            user_resource_quota = UserResource.query.filter_by(
+                user_id=u.id_, resource_id=disk_resource.id_
+            ).first()
+            user_resource_quota.quota_used = disk_usage_bytes
+            Session.commit()

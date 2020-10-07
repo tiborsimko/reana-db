@@ -16,6 +16,7 @@ from alembic import command
 from alembic import config as alembic_config
 from reana_db.database import init_db
 from reana_db.models import Resource
+from reana_db.utils import update_users_disk_quota
 
 
 @click.group()
@@ -217,5 +218,19 @@ def create_default_resources():
     else:
         click.secho(
             "No action to be taken: default resources already exist.", fg="yellow"
+        )
+        sys.exit(1)
+
+
+@quota_group.command()
+def disk_usage_update():
+    """Update users disk quota usage based on user workspace."""
+    try:
+        update_users_disk_quota()
+        click.secho("Users disk quota usage updated successfully.", fg="green")
+    except Exception as e:
+        click.secho(
+            f"[ERROR]: An error occurred when updating users disk quota usage: {repr(e)}",
+            fg="red",
         )
         sys.exit(1)
