@@ -16,7 +16,7 @@ from datetime import datetime
 
 from reana_commons.utils import get_disk_usage
 from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_RESOURCES
-from reana_db.utils import build_workspace_path
+from reana_db.utils import build_workspace_path, update_users_disk_quota
 from requests.sessions import session
 from sqlalchemy import (
     BigInteger,
@@ -128,15 +128,6 @@ class User(Base, Timestamp):
         """
         return build_workspace_path(self.id_)
 
-    def get_user_disk_usage(self, block_size=None):
-        """Retrieve user disk usage information."""
-        try:
-            workspace_path = self.get_user_workspace()
-            disk_usage = get_disk_usage(workspace_path, True, block_size)
-            return disk_usage[0]["size"]
-        except Exception:
-            return -1
-
     def get_user_quota_by_type(self, resource_type):
         """Aggregate user quota usage by resource type."""
 
@@ -217,11 +208,7 @@ class User(Base, Timestamp):
     def get_quota_usage(self):
         """Get user quota usage information."""
         return dict(
-            disk=dict(
-                usage=self.get_user_disk_usage(),
-                limit=self.get_user_quota_by_type(ResourceType.disk)["limit"],
-                health=self.get_user_quota_by_type(ResourceType.disk)["health"],
-            ),
+            disk=self.get_user_quota_by_type(ResourceType.disk),
             cpu=self.get_user_quota_by_type(ResourceType.cpu),
         )
 
@@ -336,6 +323,7 @@ class Workflow(Base, Timestamp):
     git_ref = Column(String(40))
     git_repo = Column(String(255))
     git_provider = Column(String(255))
+    owner = relationship("User", backref="workflow")
 
     __table_args__ = (
         UniqueConstraint(
@@ -501,6 +489,9 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
         workflow.run_stopped_at = datetime.now()
     elif new_status in [WorkflowStatus.running]:
         workflow.run_started_at = datetime.now()
+    elif new_status in [WorkflowStatus.deleted]:
+        update_users_disk_quota(user=workflow.owner)
+        return new_status
 
     finished_at = workflow.run_finished_at or workflow.run_stopped_at
     if workflow.run_started_at and finished_at:
@@ -523,6 +514,7 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
             user_resource_quota.quota_used += cpu_milliseconds
             Session.add(workflow_resource)
             Session.commit()
+        update_users_disk_quota(user=workflow.owner)
 
     return new_status
 

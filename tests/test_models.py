@@ -11,6 +11,7 @@
 from uuid import uuid4
 
 import pytest
+from mock import patch
 
 from reana_db.config import DEFAULT_QUOTA_RESOURCES
 from reana_db.models import (
@@ -79,6 +80,7 @@ def test_workflow_run_number_assignment(db, session, new_user):
     assert first_workflow_second_restart.run_number == 1.2
 
 
+@patch("reana_commons.utils.get_disk_usage", return_value=[{"size": "128"}])
 @pytest.mark.parametrize(
     "from_status, to_status, can_transition",
     [
@@ -189,6 +191,7 @@ def test_access_token(db, session, new_user):
     assert new_user.access_token_status == UserTokenStatus.active.name
 
 
+@patch("reana_commons.utils.get_disk_usage", return_value=[{"size": "128"}])
 def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
     time_elapsed_seconds = 0.5
@@ -206,6 +209,7 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     assert cpu_milliseconds >= time_elapsed_seconds * 1000
 
 
+@patch("reana_commons.utils.get_disk_usage", return_value=[{"size": "128"}])
 def test_user_cpu_usage(db, session, new_user, run_workflow):
     """Test aggregated CPU usage per user."""
     time_elapsed_seconds = 0.5
@@ -217,3 +221,4 @@ def test_user_cpu_usage(db, session, new_user, run_workflow):
         new_user.get_quota_usage()["cpu"]["usage"]
         >= num_workflows * time_elapsed_seconds * 1000
     )
+    assert new_user.get_quota_usage()["disk"]["usage"] == 128
