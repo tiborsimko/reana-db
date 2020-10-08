@@ -247,8 +247,8 @@ class UserToken(Base, Timestamp):
     type_ = Column(Enum(UserTokenType), nullable=False)
 
 
-class WorkflowStatus(enum.Enum):
-    """Enumeration of possible workflow statuses."""
+class RunStatus(enum.Enum):
+    """Enumeration of possible run statuses."""
 
     created = 0
     running = 1
@@ -261,21 +261,21 @@ class WorkflowStatus(enum.Enum):
 
 ALLOWED_WORKFLOW_STATUS_TRANSITIONS = [
     # Creation
-    (WorkflowStatus.created, WorkflowStatus.deleted),
-    (WorkflowStatus.created, WorkflowStatus.running),
+    (RunStatus.created, RunStatus.deleted),
+    (RunStatus.created, RunStatus.running),
     # Running
-    (WorkflowStatus.running, WorkflowStatus.failed),
-    (WorkflowStatus.running, WorkflowStatus.finished),
-    (WorkflowStatus.running, WorkflowStatus.stopped),
-    (WorkflowStatus.running, WorkflowStatus.running),
+    (RunStatus.running, RunStatus.failed),
+    (RunStatus.running, RunStatus.finished),
+    (RunStatus.running, RunStatus.stopped),
+    (RunStatus.running, RunStatus.running),
     # Stopped
-    (WorkflowStatus.stopped, WorkflowStatus.deleted),
+    (RunStatus.stopped, RunStatus.deleted),
     # Failed
-    (WorkflowStatus.failed, WorkflowStatus.deleted),
-    (WorkflowStatus.failed, WorkflowStatus.running),
+    (RunStatus.failed, RunStatus.deleted),
+    (RunStatus.failed, RunStatus.running),
     # Finished
-    (WorkflowStatus.finished, WorkflowStatus.deleted),
-    (WorkflowStatus.finished, WorkflowStatus.running),
+    (RunStatus.finished, RunStatus.deleted),
+    (RunStatus.finished, RunStatus.running),
 ]
 
 
@@ -323,7 +323,7 @@ class InteractiveSession(Base, Timestamp):
     name = Column(String(255))
     path = Column(Text)  # path to access the interactive session
     status = Column(
-        Enum(WorkflowStatus), nullable=False, default=WorkflowStatus.created
+        Enum(RunStatus), nullable=False, default=RunStatus.created
     )
     owner_id = Column(UUIDType, ForeignKey("__reana.user_.id_"))
     type_ = Column(
@@ -349,7 +349,7 @@ class Workflow(Base, Timestamp):
 
     id_ = Column(UUIDType, primary_key=True)
     name = Column(String(255))
-    status = Column(Enum(WorkflowStatus), default=WorkflowStatus.created)
+    status = Column(Enum(RunStatus), default=RunStatus.created)
     owner_id = Column(UUIDType, ForeignKey("__reana.user_.id_"))
     reana_specification = Column(JSONType)
     input_parameters = Column(JSONType)
@@ -391,7 +391,7 @@ class Workflow(Base, Timestamp):
         logs="",
         input_parameters={},
         operational_options={},
-        status=WorkflowStatus.created,
+        status=RunStatus.created,
         git_ref="",
         git_repo=None,
         git_provider=None,
@@ -524,13 +524,13 @@ class Workflow(Base, Timestamp):
 def workflow_status_change_listener(workflow, new_status, old_status, initiator):
     """Workflow status change listener."""
     if new_status in [
-        WorkflowStatus.finished,
-        WorkflowStatus.failed,
+        RunStatus.finished,
+        RunStatus.failed,
     ]:
         workflow.run_finished_at = datetime.now()
-    elif new_status in [WorkflowStatus.stopped]:
+    elif new_status in [RunStatus.stopped]:
         workflow.run_stopped_at = datetime.now()
-    elif new_status in [WorkflowStatus.running]:
+    elif new_status in [RunStatus.running]:
         workflow.run_started_at = datetime.now()
     elif new_status in [WorkflowStatus.deleted]:
         update_users_disk_quota(user=workflow.owner)

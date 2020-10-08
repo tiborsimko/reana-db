@@ -23,7 +23,7 @@ from reana_db.models import (
     User,
     UserResource,
     Workflow,
-    WorkflowStatus,
+    RunStatus,
 )
 
 
@@ -62,15 +62,15 @@ def run_workflow(session, new_user):
             reana_specification=[],
             type_="serial",
             logs="",
-            status=WorkflowStatus.created,
+            status=RunStatus.created,
         )
         # start workflow
-        workflow.status = WorkflowStatus.running
+        workflow.status = RunStatus.running
         session.add(workflow)
         session.commit()
         # simulate time elapsed
         sleep(time_elapsed_seconds)
-        Workflow.update_workflow_status(session, workflow.id_, WorkflowStatus.finished)
+        Workflow.update_workflow_status(session, workflow.id_, RunStatus.finished)
         return workflow
 
     return _run_workflow
