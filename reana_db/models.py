@@ -213,7 +213,7 @@ class User(Base, Timestamp):
         )
 
     def __repr__(self):
-        """User string represetantion."""
+        """User string representation."""
         return "<User %r>" % self.id_
 
 
@@ -290,23 +290,20 @@ class JobStatus(enum.Enum):
     queued = 5
 
 
-class UserWorkflowSession(Base, Timestamp):
-    """User Workflow Session table."""
+class WorkflowSession(Base):
+    """Workflow Session table."""
 
-    __tablename__ = "user_workflow_session"
+    __tablename__ = "workflow_session"
     __table_args__ = {"schema": "__reana"}
 
-    user_id = Column(UUIDType, ForeignKey("__reana.user_.id_"), nullable=False)
     workflow_id = Column(UUIDType, ForeignKey("__reana.workflow.id_"), nullable=True)
     session_id = Column(
         UUIDType, ForeignKey("__reana.interactive_session.id_"), primary_key=True
     )
 
     def __repr__(self):
-        """User Workflow Session string representation."""
-        return "<UserWorkflowSession {} {} {}>".format(
-            self.user_id, self.session_id, self.workflow_id
-        )
+        """Workflow Session string representation."""
+        return "<WorkflowSession {} {}>".format(self.session_id, self.workflow_id)
 
 
 class InteractiveSessionType(enum.Enum):
@@ -322,9 +319,7 @@ class InteractiveSession(Base, Timestamp):
     id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
     name = Column(String(255))
     path = Column(Text)  # path to access the interactive session
-    status = Column(
-        Enum(RunStatus), nullable=False, default=RunStatus.created
-    )
+    status = Column(Enum(RunStatus), nullable=False, default=RunStatus.created)
     owner_id = Column(UUIDType, ForeignKey("__reana.user_.id_"))
     type_ = Column(
         Enum(InteractiveSessionType),
@@ -338,7 +333,7 @@ class InteractiveSession(Base, Timestamp):
     )
 
     def __repr__(self):
-        """Interactive Session string represetantion."""
+        """Interactive Session string representation."""
         return "<InteractiveSession %r>" % self.name
 
 
@@ -373,6 +368,14 @@ class Workflow(Base, Timestamp):
     git_repo = Column(String(255))
     git_provider = Column(String(255))
     owner = relationship("User", backref="workflow")
+
+    sessions = relationship(
+        "InteractiveSession",
+        secondary="__reana.workflow_session",
+        lazy="dynamic",
+        backref="workflow",
+        cascade="all, delete",
+    )
 
     __table_args__ = (
         UniqueConstraint(
@@ -419,7 +422,7 @@ class Workflow(Base, Timestamp):
         )
 
     def __repr__(self):
-        """Workflow string represetantion."""
+        """Workflow string representation."""
         return "<Workflow %r>" % self.id_
 
     @hybrid_property
@@ -532,7 +535,7 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
         workflow.run_stopped_at = datetime.now()
     elif new_status in [RunStatus.running]:
         workflow.run_started_at = datetime.now()
-    elif new_status in [WorkflowStatus.deleted]:
+    elif new_status in [RunStatus.deleted]:
         update_users_disk_quota(user=workflow.owner)
         return new_status
 
@@ -712,6 +715,25 @@ class WorkflowResource(Base, Timestamp):
     def __repr__(self):
         """Workflow Resource string representation."""
         return "<WorkflowResource {} {}>".format(self.workflow_id, self.resource_id)
+
+
+class InteractiveSessionResource(Base, Timestamp):
+    """Interactive Session Resource table."""
+
+    __tablename__ = "interactive_session_resource"
+    __table_args__ = {"schema": "__reana"}
+
+    session_id = Column(
+        UUIDType, ForeignKey("__reana.interactive_session.id_"), primary_key=True
+    )
+    resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
+    quantity_used = Column(BigInteger())
+
+    def __repr__(self):
+        """Interactive Session Resource string representation."""
+        return "<InteractiveSessionResource {} {}>".format(
+            self.session_id, self.resource_id
+        )
 
 
 class QuotaHealth(enum.Enum):
