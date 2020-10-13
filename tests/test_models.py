@@ -13,18 +13,19 @@ from uuid import uuid4
 import pytest
 from mock import patch
 
-from reana_db.config import DEFAULT_QUOTA_RESOURCES
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
-    Resource,
     ResourceUnit,
+    ResourceType,
     UserTokenStatus,
     UserTokenType,
     Workflow,
     WorkflowResource,
     RunStatus,
 )
+
+from reana_db.utils import get_default_quota_resource
 
 
 def test_workflow_run_number_assignment(db, session, new_user):
@@ -197,9 +198,7 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
     time_elapsed_seconds = 0.5
     workflow = run_workflow(time_elapsed_seconds=time_elapsed_seconds)
-    cpu_resource = Resource.query.filter_by(
-        name=DEFAULT_QUOTA_RESOURCES["cpu"]
-    ).one_or_none()
+    cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
     cpu_milliseconds = (
         WorkflowResource.query.filter_by(
             workflow_id=workflow.id_, resource_id=cpu_resource.id_

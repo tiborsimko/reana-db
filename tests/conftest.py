@@ -15,13 +15,9 @@ from uuid import uuid4
 
 import pytest
 
-from reana_db.config import DEFAULT_QUOTA_RESOURCES
 from reana_db.models import (
     Resource,
-    ResourceType,
-    ResourceUnit,
     User,
-    UserResource,
     Workflow,
     RunStatus,
 )

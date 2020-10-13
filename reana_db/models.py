@@ -16,9 +16,6 @@ import uuid
 from datetime import datetime
 
 from reana_commons.utils import get_disk_usage
-from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_RESOURCES
-from reana_db.utils import build_workspace_path, update_users_disk_quota
-from requests.sessions import session
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -39,6 +36,14 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+
+from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_RESOURCES
+from reana_db.utils import (
+    build_workspace_path,
+    store_workflow_disk_quota,
+    get_default_quota_resource,
+    update_users_disk_quota,
+)
 
 Base = declarative_base()
 
@@ -508,7 +513,36 @@ class Workflow(Base, Timestamp):
 
     def get_workspace_disk_usage(self, summarize=False, block_size=None):
         """Retrieve disk usage information of a workspace."""
-        return get_disk_usage(self.workspace_path, summarize, block_size)
+        from .database import Session
+
+        def _format_disk_usage(bytes_, block_size):
+            """Format disk usage according to passed args."""
+            if block_size:
+                # TODO: Change when https://github.com/reanahub/reana-server/issues/296
+                # gets implemented.
+                size = (
+                    f"{bytes_}B" if block_size == "b" else f"{round(bytes_/1024, 2)}K"
+                )
+            else:
+                size = str(bytes_)
+            return [{"name": "", "size": size}]
+
+        if not summarize:
+            # size break down per directory so we can't query DB (`r-client du`)
+            return get_disk_usage(self.workspace_path, summarize, block_size)
+
+        disk_resource = get_default_quota_resource(ResourceType.disk.name)
+        disk_bytes = (
+            Session.query(WorkflowResource.quantity_used)
+            .filter_by(workflow_id=self.id_, resource_id=disk_resource.id_)
+            .scalar()
+        )
+        if disk_bytes:
+            return _format_disk_usage(disk_bytes, block_size)
+
+        # recalculate disk workflow resource
+        workflow_resource = store_workflow_disk_quota(self)
+        return _format_disk_usage(workflow_resource.quantity_used, block_size)
 
     @staticmethod
     def update_workflow_status(
@@ -545,6 +579,8 @@ class Workflow(Base, Timestamp):
 @event.listens_for(Workflow.status, "set")
 def workflow_status_change_listener(workflow, new_status, old_status, initiator):
     """Workflow status change listener."""
+    from .database import Session
+
     if new_status in [
         RunStatus.finished,
         RunStatus.failed,
@@ -562,24 +598,20 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
     if workflow.run_started_at and finished_at:
         cpu_time = finished_at - workflow.run_started_at
         cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
-        cpu_resource = Resource.query.filter_by(
-            name=DEFAULT_QUOTA_RESOURCES["cpu"]
-        ).one_or_none()
-        if cpu_resource:
-            from .database import Session
-
-            workflow_resource = WorkflowResource(
-                workflow_id=workflow.id_,
-                resource_id=cpu_resource.id_,
-                quantity_used=cpu_milliseconds,
-            )
-            user_resource_quota = UserResource.query.filter_by(
-                user_id=workflow.owner_id, resource_id=cpu_resource.id_
-            ).first()
-            user_resource_quota.quota_used += cpu_milliseconds
-            Session.add(workflow_resource)
-            Session.commit()
+        cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
+        workflow_resource = WorkflowResource(
+            workflow_id=workflow.id_,
+            resource_id=cpu_resource.id_,
+            quantity_used=cpu_milliseconds,
+        )
+        user_resource_quota = UserResource.query.filter_by(
+            user_id=workflow.owner_id, resource_id=cpu_resource.id_
+        ).first()
+        user_resource_quota.quota_used += cpu_milliseconds
+        Session.add(workflow_resource)
+        Session.commit()
         update_users_disk_quota(user=workflow.owner)
+        store_workflow_disk_quota(workflow)
 
     return new_status
 

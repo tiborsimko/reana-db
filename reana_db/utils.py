@@ -210,3 +210,53 @@ def update_users_disk_quota(user=None):
             ).first()
             user_resource_quota.quota_used = disk_usage_bytes
             Session.commit()
+
+
+def get_default_quota_resource(resource_type):
+    """
+    Get default quota resource by given resource type.
+
+    :param resource_type: Resource type corresponding to default resource to get.
+    :type resource_type: reana_db.models.ResourceType
+    """
+    from reana_db.config import DEFAULT_QUOTA_RESOURCES
+    from reana_db.models import Resource
+
+    if resource_type not in DEFAULT_QUOTA_RESOURCES.keys():
+        raise Exception(f"Default resource of type {resource_type} does not exist.")
+
+    return Resource.query.filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type]).one()
+
+
+def store_workflow_disk_quota(workflow):
+    """
+    Update or create disk workflow resource.
+
+    :param workflow: Workflow whose disk resource usage must be calculated.
+    :type workflow: reana_db.models.Workflow
+    """
+    from reana_commons.utils import get_disk_usage
+
+    from reana_db.database import Session
+    from reana_db.models import ResourceType, WorkflowResource
+
+    disk_resource = get_default_quota_resource(ResourceType.disk.name)
+    workflow_resource = (
+        Session.query(WorkflowResource)
+        .filter_by(workflow_id=workflow.id_, resource_id=disk_resource.id_)
+        .one_or_none()
+    )
+
+    disk_bytes = get_disk_usage(workflow.workspace_path, summarize=True, block_size="b")
+    disk_bytes = int(disk_bytes[0]["size"])
+    if workflow_resource:
+        workflow_resource.quantity_used = disk_bytes
+    else:
+        workflow_resource = WorkflowResource(
+            workflow_id=workflow.id_,
+            resource_id=disk_resource.id_,
+            quantity_used=disk_bytes,
+        )
+        Session.add(workflow_resource)
+    Session.commit()
+    return workflow_resource
