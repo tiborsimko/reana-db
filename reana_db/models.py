@@ -11,6 +11,7 @@
 from __future__ import absolute_import
 
 import enum
+import math
 import uuid
 from datetime import datetime
 
@@ -145,14 +146,32 @@ class User(Base, Timestamp):
 
         quota_usage = 0
         quota_limit = 0
+        unit = None
         for user_resource in self.resources:
             if user_resource.resource.type_ == resource_type:
+                # make sure that all resources of the same type use the same units
+                if unit and unit != user_resource.resource.unit:
+                    raise Exception(
+                        "Error while calculating quota usage. Not all "
+                        f"resources of resource type {resource_type} use "
+                        "the same units."
+                    )
+                unit = user_resource.resource.unit
                 quota_usage += user_resource.quota_used
                 quota_limit += user_resource.quota_limit
 
+        quota_human_readable_usage = ResourceUnit.human_readable_unit(unit, quota_usage)
+        quota_human_readable_limit = ResourceUnit.human_readable_unit(unit, quota_limit)
+
         return {
-            "usage": quota_usage,
-            "limit": quota_limit,
+            "usage": {
+                "raw": quota_usage,
+                "human_readable": quota_human_readable_usage,
+            },
+            "limit": {
+                "raw": quota_limit,
+                "human_readable": quota_human_readable_limit,
+            },
             "health": _get_health_status(quota_usage, quota_limit),
         }
 
@@ -637,6 +656,51 @@ class ResourceUnit(enum.Enum):
 
     bytes_ = 0
     milliseconds = 1
+
+    @staticmethod
+    def _human_readable_milliseconds(milliseconds):
+        """Convert milliseconds usage to human readable string."""
+        hours, minutes, seconds = (
+            milliseconds // (1000 * 60 * 60),
+            (milliseconds // (1000 * 60)) % 60,
+            (milliseconds // 1000) % 60,
+        )
+
+        human_readable_milliseconds = ""
+        for value, unit in [(hours, "h"), (minutes, "m"), (seconds, "s")]:
+            if value >= 1:
+                human_readable_milliseconds += "{value}{unit} ".format(
+                    value=value, unit=unit
+                )
+
+        return human_readable_milliseconds.strip() or "0s"
+
+    @staticmethod
+    def _human_readable_bytes(bytes_):
+        """Convert bytes usage to human readable string."""
+        if bytes_ == 0:
+            return "0 Bytes"
+        units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+        digits = 2
+        k = 1024
+        unit_index = math.floor(math.log(bytes_) / math.log(k))
+
+        converted_value = round(bytes_ / math.pow(k, unit_index), digits)
+        return "{converted_value} {converted_unit}".format(
+            converted_value=int(converted_value)
+            if converted_value.is_integer()
+            else converted_value,
+            converted_unit=units[unit_index],
+        )
+
+    @staticmethod
+    def human_readable_unit(unit, value):
+        """Convert passed value in units to human readable string."""
+        convert_to_human_readable = {
+            ResourceUnit.bytes_: ResourceUnit._human_readable_bytes,
+            ResourceUnit.milliseconds: ResourceUnit._human_readable_milliseconds,
+        }
+        return convert_to_human_readable[unit](value)
 
 
 class Resource(Base, Timestamp):

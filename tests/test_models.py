@@ -18,6 +18,7 @@ from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
     Resource,
+    ResourceUnit,
     UserTokenStatus,
     UserTokenType,
     Workflow,
@@ -218,7 +219,36 @@ def test_user_cpu_usage(db, session, new_user, run_workflow):
         run_workflow(time_elapsed_seconds=time_elapsed_seconds)
 
     assert (
-        new_user.get_quota_usage()["cpu"]["usage"]
+        new_user.get_quota_usage()["cpu"]["usage"]["raw"]
         >= num_workflows * time_elapsed_seconds * 1000
     )
-    assert new_user.get_quota_usage()["disk"]["usage"] == 128
+    assert new_user.get_quota_usage()["disk"]["usage"]["raw"] == 128
+
+
+@pytest.mark.parametrize(
+    "unit, value, human_readable_string",
+    [
+        # Milliseconds VS human readable
+        (ResourceUnit.milliseconds, 0, "0s"),
+        (ResourceUnit.milliseconds, 1000 * 35, "35s"),
+        (ResourceUnit.milliseconds, 1000 * 60 * 7 + 1000 * 40, "7m 40s"),
+        (ResourceUnit.milliseconds, 1000 * 60 * 60 * 2, "2h"),
+        (ResourceUnit.milliseconds, 1000 * 60 * 60 * 2 + 1000 * 60 * 20, "2h 20m"),
+        (
+            ResourceUnit.milliseconds,
+            1000 * 60 * 60 * 2 + 1000 * 60 * 35 + 1000 * 10,
+            "2h 35m 10s",
+        ),
+        # Bytes VS human readable
+        (ResourceUnit.bytes_, 0, "0 Bytes"),
+        (ResourceUnit.bytes_, 1024 * 35, "35 KB"),
+        (ResourceUnit.bytes_, 1024 * 200 + 512, "200.5 KB"),
+        (ResourceUnit.bytes_, 1024 ** 2, "1 MB"),
+        (ResourceUnit.bytes_, 1024 ** 2 + 1024 * 768, "1.75 MB"),
+        (ResourceUnit.bytes_, 1024 ** 3 * 5 + 1024 ** 2 * 100, "5.1 GB"),
+        (ResourceUnit.bytes_, 1024 ** 4 + 1024 ** 3 * 256, "1.25 TB"),
+    ],
+)
+def test_human_readable_unit_values(unit, value, human_readable_string):
+    """Test converting units from canonical values to human-readable string."""
+    assert ResourceUnit.human_readable_unit(unit, value) == human_readable_string
