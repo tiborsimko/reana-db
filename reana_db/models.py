@@ -53,7 +53,67 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 
-class User(Base, Timestamp):
+class QuotaBase:
+    """Quota base functionality."""
+
+    def _get_quota_by_type(self, resource_type):
+        """Aggregate quota usage by resource type."""
+
+        def _get_health_status(usage, limit):
+            """Calculate quota health status."""
+            health = QuotaHealth.healthy
+            if limit:
+                percentage = usage / limit * 100
+                if percentage >= 60:
+                    if percentage >= 85:
+                        health = QuotaHealth.critical
+                    else:
+                        health = QuotaHealth.warning
+            return health.name
+
+        quota_usage = 0
+        quota_limit = 0
+        unit = None
+
+        for resource in self.resources:
+            if resource.resource.type_ == resource_type:
+                # make sure that all resources of the same type use the same units
+                if unit and unit != resource.resource.unit:
+                    raise Exception(
+                        "Error while calculating quota usage. Not all "
+                        "resources of resource type {} use "
+                        "the same units.".format(resource_type)
+                    )
+                unit = resource.resource.unit
+                quota_usage += resource.quota_used
+                if hasattr(resource, "quota_limit"):
+                    quota_limit += resource.quota_limit
+
+        usage_dict = {
+            "usage": {
+                "raw": quota_usage,
+                "human_readable": ResourceUnit.human_readable_unit(unit, quota_usage),
+            }
+        }
+        if quota_limit:
+            usage_dict["limit"] = {
+                "raw": quota_limit,
+                "human_readable": ResourceUnit.human_readable_unit(unit, quota_limit),
+            }
+            usage_dict["health"] = _get_health_status(quota_usage, quota_limit)
+
+        return usage_dict
+
+    def get_quota_usage(self):
+        """Get quota usage information."""
+        used_resource_types = set(res.resource.type_ for res in self.resources)
+        return {
+            resource_type.name: self._get_quota_by_type(resource_type)
+            for resource_type in used_resource_types
+        }
+
+
+class User(Base, Timestamp, QuotaBase):
     """User table."""
 
     __tablename__ = "user_"
@@ -66,7 +126,6 @@ class User(Base, Timestamp):
     tokens = relationship("UserToken", backref="user_", lazy="dynamic")
     workflows = relationship("Workflow", backref="user_", lazy="dynamic")
     audit_logs = relationship("AuditLog", backref="user_")
-    resources = relationship("UserResource", backref="user_")
 
     def __init__(self, access_token=None, **kwargs):
         """Initialize user model."""
@@ -134,52 +193,6 @@ class User(Base, Timestamp):
         """
         return build_workspace_path(self.id_)
 
-    def get_user_quota_by_type(self, resource_type):
-        """Aggregate user quota usage by resource type."""
-
-        def _get_health_status(usage, limit):
-            """Calculate quota health status."""
-            health = QuotaHealth.healthy
-            if limit:
-                percentage = usage / limit * 100
-                if percentage >= 60:
-                    if percentage >= 85:
-                        health = QuotaHealth.critical
-                    else:
-                        health = QuotaHealth.warning
-            return health.name
-
-        quota_usage = 0
-        quota_limit = 0
-        unit = None
-        for user_resource in self.resources:
-            if user_resource.resource.type_ == resource_type:
-                # make sure that all resources of the same type use the same units
-                if unit and unit != user_resource.resource.unit:
-                    raise Exception(
-                        "Error while calculating quota usage. Not all "
-                        "resources of resource type {} use "
-                        "the same units.".format(resource_type)
-                    )
-                unit = user_resource.resource.unit
-                quota_usage += user_resource.quota_used
-                quota_limit += user_resource.quota_limit
-
-        quota_human_readable_usage = ResourceUnit.human_readable_unit(unit, quota_usage)
-        quota_human_readable_limit = ResourceUnit.human_readable_unit(unit, quota_limit)
-
-        return {
-            "usage": {
-                "raw": quota_usage,
-                "human_readable": quota_human_readable_usage,
-            },
-            "limit": {
-                "raw": quota_limit,
-                "human_readable": quota_human_readable_limit,
-            },
-            "health": _get_health_status(quota_usage, quota_limit),
-        }
-
     def request_access_token(self):
         """Create user token and mark it as requested."""
         from .database import Session
@@ -228,13 +241,6 @@ class User(Base, Timestamp):
                     quota_used=0,
                 )
             )
-
-    def get_quota_usage(self):
-        """Get user quota usage information."""
-        return dict(
-            disk=self.get_user_quota_by_type(ResourceType.disk),
-            cpu=self.get_user_quota_by_type(ResourceType.cpu),
-        )
 
     def __repr__(self):
         """User string representation."""
@@ -336,7 +342,7 @@ class InteractiveSessionType(enum.Enum):
     jupyter = 0
 
 
-class InteractiveSession(Base, Timestamp):
+class InteractiveSession(Base, Timestamp, QuotaBase):
     """Interactive Session table."""
 
     __tablename__ = "interactive_session"
@@ -361,7 +367,7 @@ class InteractiveSession(Base, Timestamp):
         return "<InteractiveSession %r>" % self.name
 
 
-class Workflow(Base, Timestamp):
+class Workflow(Base, Timestamp, QuotaBase):
     """Workflow table."""
 
     __tablename__ = "workflow"
@@ -511,40 +517,32 @@ class Workflow(Base, Timestamp):
         """Return full workflow name including run number."""
         return "{}.{}".format(self.name, str(self.run_number))
 
-    def get_workspace_disk_usage(self, summarize=False, block_size=None):
+    def get_workspace_disk_usage(self, summarize=False):
         """Retrieve disk usage information of a workspace."""
-        from .database import Session
-
-        def _format_disk_usage(bytes_, block_size):
-            """Format disk usage according to passed args."""
-            if block_size:
-                # TODO: Change when https://github.com/reanahub/reana-server/issues/296
-                # gets implemented.
-                size = (
-                    "{}B".format(bytes_)
-                    if block_size == "b"
-                    else "{}K".format(round(bytes_ / 1024, 2))
-                )
-            else:
-                size = str(bytes_)
-            return [{"name": "", "size": size}]
+        from functools import partial
 
         if not summarize:
             # size break down per directory so we can't query DB (`r-client du`)
-            return get_disk_usage(self.workspace_path, summarize, block_size)
+            return get_disk_usage(
+                self.workspace_path,
+                summarize,
+                to_human_readable_units=partial(
+                    ResourceUnit.human_readable_unit, ResourceUnit.bytes_
+                ),
+            )
 
-        disk_resource = get_default_quota_resource(ResourceType.disk.name)
-        disk_bytes = (
-            Session.query(WorkflowResource.quantity_used)
-            .filter_by(workflow_id=self.id_, resource_id=disk_resource.id_)
-            .scalar()
-        )
-        if disk_bytes:
-            return _format_disk_usage(disk_bytes, block_size)
+        disk_usage = self.get_quota_usage().get("disk", {}).get("usage", {})
+        if not disk_usage:
+            # recalculate disk workflow resource
+            workflow_resource = store_workflow_disk_quota(self)
+            disk_usage = dict(
+                raw=workflow_resource.quota_used,
+                to_human_readable_units=ResourceUnit.human_readable_unit(
+                    ResourceUnit.bytes_, workflow_resource.quota_used
+                ),
+            )
 
-        # recalculate disk workflow resource
-        workflow_resource = store_workflow_disk_quota(self)
-        return _format_disk_usage(workflow_resource.quantity_used, block_size)
+        return [{"name": "", "size": disk_usage}]
 
     @staticmethod
     def update_workflow_status(
@@ -611,7 +609,7 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
             workflow_resource = WorkflowResource(
                 workflow_id=workflow.id_,
                 resource_id=cpu_resource.id_,
-                quantity_used=cpu_milliseconds,
+                quota_used=cpu_milliseconds,
             )
             user_resource_quota = UserResource.query.filter_by(
                 user_id=workflow.owner_id, resource_id=cpu_resource.id_
@@ -808,7 +806,7 @@ class UserResource(Base, Timestamp):
     resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
     quota_limit = Column(BigInteger())
     quota_used = Column(BigInteger())
-    user = relationship("User", backref="user_resource")
+    user = relationship("User", backref="resources")
     resource = relationship("Resource", backref="user_resource")
 
     def __repr__(self):
@@ -824,7 +822,9 @@ class WorkflowResource(Base, Timestamp):
 
     workflow_id = Column(UUIDType, ForeignKey("__reana.workflow.id_"), primary_key=True)
     resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
-    quantity_used = Column(BigInteger())
+    quota_used = Column(BigInteger())
+    workflow = relationship("Workflow", backref="resources")
+    resource = relationship("Resource", backref="workflow_resources")
 
     def __repr__(self):
         """Workflow Resource string representation."""
@@ -841,7 +841,9 @@ class InteractiveSessionResource(Base, Timestamp):
         UUIDType, ForeignKey("__reana.interactive_session.id_"), primary_key=True
     )
     resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
-    quantity_used = Column(BigInteger())
+    quota_used = Column(BigInteger())
+    interactive_session = relationship("InteractiveSession", backref="resources")
+    resource = relationship("Resource", backref="interactive_session_resources")
 
     def __repr__(self):
         """Interactive Session Resource string representation."""

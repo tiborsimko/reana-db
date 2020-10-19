@@ -195,10 +195,8 @@ def update_users_disk_quota(user=None):
 
     for u in users:
         workspace_path = u.get_user_workspace()
-        disk_usage_bytes = get_disk_usage(
-            workspace_path, summarize=True, block_size="b"
-        )
-        disk_usage_bytes = int(disk_usage_bytes[0]["size"])
+        disk_usage_bytes = get_disk_usage(workspace_path, summarize=True)
+        disk_usage_bytes = int(disk_usage_bytes[0]["size"]["raw"])
 
         disk_resource = Resource.query.filter_by(
             name=DEFAULT_QUOTA_RESOURCES["disk"]
@@ -248,10 +246,8 @@ def store_workflow_disk_quota(workflow):
     def _get_disk_usage_or_zero(workflow):
         """Get disk usage for a workflow if the workspace exists, zero if not."""
         try:
-            disk_bytes = get_disk_usage(
-                workflow.workspace_path, summarize=True, block_size="b"
-            )
-            return int(disk_bytes[0]["size"])
+            disk_bytes = get_disk_usage(workflow.workspace_path, summarize=True)
+            return int(disk_bytes[0]["size"]["raw"])
         except REANAMissingWorkspaceError as e:
             return 0
 
@@ -263,13 +259,13 @@ def store_workflow_disk_quota(workflow):
     )
 
     if workflow_resource:
-        workflow_resource.quantity_used = _get_disk_usage_or_zero(workflow)
+        workflow_resource.quota_used = _get_disk_usage_or_zero(workflow)
         Session.commit()
     elif inspect(workflow).persistent:
         workflow_resource = WorkflowResource(
             workflow_id=workflow.id_,
             resource_id=disk_resource.id_,
-            quantity_used=_get_disk_usage_or_zero(workflow),
+            quota_used=_get_disk_usage_or_zero(workflow),
         )
         Session.add(workflow_resource)
         Session.commit()

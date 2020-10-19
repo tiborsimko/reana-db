@@ -57,7 +57,7 @@ def upgrade():
         sa.Column(
             "resource_id", sqlalchemy_utils.types.uuid.UUIDType(), nullable=False
         ),
-        sa.Column("quantity_used", sa.BigInteger(), nullable=True),
+        sa.Column("quota_used", sa.BigInteger(), nullable=True),
         sa.ForeignKeyConstraint(["resource_id"], ["__reana.resource.id_"],),
         sa.ForeignKeyConstraint(["session_id"], ["__reana.interactive_session.id_"],),
         sa.PrimaryKeyConstraint("session_id", "resource_id"),

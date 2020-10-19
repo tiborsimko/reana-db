@@ -62,7 +62,7 @@ def upgrade():
         sa.Column(
             "resource_id", sqlalchemy_utils.types.uuid.UUIDType(), nullable=False
         ),
-        sa.Column("quantity_used", sa.BigInteger(), nullable=True),
+        sa.Column("quota_used", sa.BigInteger(), nullable=True),
         sa.ForeignKeyConstraint(["resource_id"], ["__reana.resource.id_"],),
         sa.ForeignKeyConstraint(["workflow_id"], ["__reana.workflow.id_"],),
         sa.PrimaryKeyConstraint("workflow_id", "resource_id"),
