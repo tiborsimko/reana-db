@@ -1,19 +1,17 @@
 Changes
 =======
 
-Version master (UNRELEASED)
----------------------------
+Version 0.7.0 (2020-10-20)
+--------------------------
 
-- Encrypts user tokens.
-- Adds initial central workflow status transitions logic.
-- Factors out user tokens from User table to UserToken table.
-- Adds audit table and logic to register actions.
-- Adds new column ``workspace_path`` to the Workflow table.
-- Adds fixtures for better testing models.
-- Amends database host configuration to respect REANA component prefixing.
-- Uses centrally configured database service name from REANA-Commons.
-- Adds REANA-Commons as a dependency.
-- Add Black formatter support.
+- Adds initial central workflow status transition logic handler.
+- Adds new audit table and logic to register actions. (``AuditLog``, ``AuditLogAction``)
+- Adds fixtures for better testing of database models.
+- Changes user token storage to move tokens from ``User`` table to ``UserToken`` table and to encrypt them.
+- Changes ``Workflow`` table to add a new ``workspace_path`` column.
+- Changes default database service to use centrally configured one from REANA-Commons. (``REANA_INFRASTRUCTURE_COMPONENTS_HOSTNAMES``)
+- Changes code formatting to respect ``black`` coding style.
+- Changes documentation to single-page layout.
 
 Version 0.6.0 (2019-12-19)
 --------------------------
