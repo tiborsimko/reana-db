@@ -37,7 +37,7 @@ from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
-from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_RESOURCES
+from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_LIMITS, DEFAULT_QUOTA_RESOURCES
 from reana_db.utils import (
     build_workspace_path,
     store_workflow_disk_quota,
@@ -224,7 +224,7 @@ class User(Base, Timestamp):
                 UserResource(
                     user_id=self.id_,
                     resource_id=resource.id_,
-                    quota_limit=0,
+                    quota_limit=DEFAULT_QUOTA_LIMITS[resource.type_.name],
                     quota_used=0,
                 )
             )

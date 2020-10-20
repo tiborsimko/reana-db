@@ -51,3 +51,9 @@ DEFAULT_QUOTA_RESOURCES = {
     "disk": "shared storage",
 }
 """Default quota resources to fill Resource table."""
+
+DEFAULT_QUOTA_LIMITS = {
+    "cpu": int(float(os.getenv("REANA_DEFAULT_QUOTA_CPU_LIMIT", 0))),
+    "disk": int(float(os.getenv("REANA_DEFAULT_QUOTA_DISK_LIMIT", 0))),
+}
+"""Default CPU (in milliseconds) and disk (in bytes) quota limits."""
