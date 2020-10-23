@@ -235,6 +235,7 @@ def store_workflow_disk_quota(workflow):
     :param workflow: Workflow whose disk resource usage must be calculated.
     :type workflow: reana_db.models.Workflow
     """
+    from reana_commons.errors import REANAMissingWorkspaceError
     from reana_commons.utils import get_disk_usage
 
     from reana_db.database import Session
@@ -246,9 +247,13 @@ def store_workflow_disk_quota(workflow):
         .filter_by(workflow_id=workflow.id_, resource_id=disk_resource.id_)
         .one_or_none()
     )
-
-    disk_bytes = get_disk_usage(workflow.workspace_path, summarize=True, block_size="b")
-    disk_bytes = int(disk_bytes[0]["size"])
+    try:
+        disk_bytes = get_disk_usage(
+            workflow.workspace_path, summarize=True, block_size="b"
+        )
+        disk_bytes = int(disk_bytes[0]["size"])
+    except REANAMissingWorkspaceError as e:
+        disk_bytes = 0
     if workflow_resource:
         workflow_resource.quantity_used = disk_bytes
     else:

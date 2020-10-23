@@ -575,43 +575,59 @@ class Workflow(Base, Timestamp):
         current_transition = (self.status, next_status)
         return current_transition in ALLOWED_WORKFLOW_STATUS_TRANSITIONS
 
+    def update_workflow_timestamp(self, new_status):
+        """Update workflow timestamps according to new status."""
+        from .database import Session
+
+        if new_status in [
+            RunStatus.finished,
+            RunStatus.failed,
+        ]:
+            self.run_finished_at = datetime.now()
+        elif new_status in [RunStatus.stopped]:
+            self.run_stopped_at = datetime.now()
+        elif new_status in [RunStatus.running]:
+            self.run_started_at = datetime.now()
+        Session.commit()
+
 
 @event.listens_for(Workflow.status, "set")
 def workflow_status_change_listener(workflow, new_status, old_status, initiator):
     """Workflow status change listener."""
     from .database import Session
 
+    def _update_disk_quota(workflow):
+        update_users_disk_quota(user=workflow.owner)
+        store_workflow_disk_quota(workflow)
+
+    def _update_cpu_quota(workflow):
+        terminated_at = workflow.run_finished_at or workflow.run_stopped_at
+        if workflow.run_started_at and terminated_at:
+            cpu_time = terminated_at - workflow.run_started_at
+            cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
+            cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
+            workflow_resource = WorkflowResource(
+                workflow_id=workflow.id_,
+                resource_id=cpu_resource.id_,
+                quantity_used=cpu_milliseconds,
+            )
+            user_resource_quota = UserResource.query.filter_by(
+                user_id=workflow.owner_id, resource_id=cpu_resource.id_
+            ).first()
+            user_resource_quota.quota_used += cpu_milliseconds
+            Session.add(workflow_resource)
+            Session.commit()
+
+    workflow.update_workflow_timestamp(new_status)
     if new_status in [
         RunStatus.finished,
         RunStatus.failed,
+        RunStatus.stopped,
     ]:
-        workflow.run_finished_at = datetime.now()
-    elif new_status in [RunStatus.stopped]:
-        workflow.run_stopped_at = datetime.now()
-    elif new_status in [RunStatus.running]:
-        workflow.run_started_at = datetime.now()
+        _update_cpu_quota(workflow)
+        _update_disk_quota(workflow)
     elif new_status in [RunStatus.deleted]:
-        update_users_disk_quota(user=workflow.owner)
-        return new_status
-
-    finished_at = workflow.run_finished_at or workflow.run_stopped_at
-    if workflow.run_started_at and finished_at:
-        cpu_time = finished_at - workflow.run_started_at
-        cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
-        cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
-        workflow_resource = WorkflowResource(
-            workflow_id=workflow.id_,
-            resource_id=cpu_resource.id_,
-            quantity_used=cpu_milliseconds,
-        )
-        user_resource_quota = UserResource.query.filter_by(
-            user_id=workflow.owner_id, resource_id=cpu_resource.id_
-        ).first()
-        user_resource_quota.quota_used += cpu_milliseconds
-        Session.add(workflow_resource)
-        Session.commit()
-        update_users_disk_quota(user=workflow.owner)
-        store_workflow_disk_quota(workflow)
+        _update_disk_quota(workflow)
 
     return new_status
 
