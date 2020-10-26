@@ -48,7 +48,7 @@ def run_workflow(session, new_user):
         id_ = uuid4()
         workflow = Workflow(
             id_=str(id_),
-            name=f"test_{id_}",
+            name="test_{}".format(id_),
             owner_id=new_user.id_,
             reana_specification=[],
             type_="serial",

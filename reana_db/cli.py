@@ -213,7 +213,8 @@ def create_default_resources():
     created_resources = Resource.initialise_default_resources()
     if created_resources:
         click.secho(
-            f"Created resources: {[r.name for r in created_resources]}", fg="green"
+            "Created resources: {}".format([r.name for r in created_resources]),
+            fg="green",
         )
     else:
         click.secho(
@@ -230,7 +231,9 @@ def disk_usage_update():
         click.secho("Users disk quota usage updated successfully.", fg="green")
     except Exception as e:
         click.secho(
-            f"[ERROR]: An error occurred when updating users disk quota usage: {repr(e)}",
+            "[ERROR]: An error occurred when updating users disk quota usage: {}".format(
+                repr(e)
+            ),
             fg="red",
         )
         sys.exit(1)

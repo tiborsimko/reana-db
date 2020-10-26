@@ -158,8 +158,8 @@ class User(Base, Timestamp):
                 if unit and unit != user_resource.resource.unit:
                     raise Exception(
                         "Error while calculating quota usage. Not all "
-                        f"resources of resource type {resource_type} use "
-                        "the same units."
+                        "resources of resource type {} use "
+                        "the same units.".format(resource_type)
                     )
                 unit = user_resource.resource.unit
                 quota_usage += user_resource.quota_used
@@ -521,7 +521,9 @@ class Workflow(Base, Timestamp):
                 # TODO: Change when https://github.com/reanahub/reana-server/issues/296
                 # gets implemented.
                 size = (
-                    f"{bytes_}B" if block_size == "b" else f"{round(bytes_/1024, 2)}K"
+                    "{}B".format(bytes_)
+                    if block_size == "b"
+                    else "{}K".format(round(bytes_ / 1024, 2))
                 )
             else:
                 size = str(bytes_)
@@ -785,7 +787,7 @@ class Resource(Base, Timestamp):
                         name=name,
                         type_=ResourceType[type_],
                         unit=resource_type_to_unit[ResourceType[type_]],
-                        title=f"Default {type_} resource.",
+                        title="Default {} resource.".format(type_),
                     )
                 )
 

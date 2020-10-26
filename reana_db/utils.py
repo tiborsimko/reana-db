@@ -225,7 +225,9 @@ def get_default_quota_resource(resource_type):
     from reana_db.models import Resource
 
     if resource_type not in DEFAULT_QUOTA_RESOURCES.keys():
-        raise Exception(f"Default resource of type {resource_type} does not exist.")
+        raise Exception(
+            "Default resource of type {} does not exist.".format(resource_type)
+        )
 
     return Resource.query.filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type]).one()
 
