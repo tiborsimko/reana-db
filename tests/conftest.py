@@ -9,18 +9,13 @@
 """Pytest configuration for REANA-DB."""
 
 
-from datetime import datetime
-from time import sleep
+from datetime import datetime, timedelta
 from uuid import uuid4
 
+import mock
 import pytest
 
-from reana_db.models import (
-    Resource,
-    User,
-    Workflow,
-    RunStatus,
-)
+from reana_db.models import Resource, RunStatus, User, Workflow
 
 
 @pytest.fixture(scope="module")
@@ -64,9 +59,15 @@ def run_workflow(session, new_user):
         workflow.status = RunStatus.running
         session.add(workflow)
         session.commit()
-        # simulate time elapsed
-        sleep(time_elapsed_seconds)
-        Workflow.update_workflow_status(session, workflow.id_, RunStatus.finished)
+        termination_value = datetime.now() + timedelta(seconds=time_elapsed_seconds)
+
+        class MockDatetime(datetime):
+            @classmethod
+            def now(cls):
+                return termination_value
+
+        with mock.patch("reana_db.models.datetime", MockDatetime):
+            Workflow.update_workflow_status(session, workflow.id_, RunStatus.finished)
         return workflow
 
     return _run_workflow
