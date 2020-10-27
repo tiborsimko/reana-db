@@ -10,6 +10,8 @@
 import os
 from uuid import UUID
 
+from sqlalchemy import inspect
+
 
 def build_workspace_path(user_id, workflow_id=None):
     """Build user's workspace relative path.
@@ -241,27 +243,33 @@ def store_workflow_disk_quota(workflow):
     from reana_db.database import Session
     from reana_db.models import ResourceType, WorkflowResource
 
+    def _get_disk_usage_or_zero(workflow):
+        """Get disk usage for a workflow if the workspace exists, zero if not."""
+        try:
+            disk_bytes = get_disk_usage(
+                workflow.workspace_path, summarize=True, block_size="b"
+            )
+            return int(disk_bytes[0]["size"])
+        except REANAMissingWorkspaceError as e:
+            return 0
+
     disk_resource = get_default_quota_resource(ResourceType.disk.name)
     workflow_resource = (
         Session.query(WorkflowResource)
         .filter_by(workflow_id=workflow.id_, resource_id=disk_resource.id_)
         .one_or_none()
     )
-    try:
-        disk_bytes = get_disk_usage(
-            workflow.workspace_path, summarize=True, block_size="b"
-        )
-        disk_bytes = int(disk_bytes[0]["size"])
-    except REANAMissingWorkspaceError as e:
-        disk_bytes = 0
+
     if workflow_resource:
-        workflow_resource.quantity_used = disk_bytes
-    else:
+        workflow_resource.quantity_used = _get_disk_usage_or_zero(workflow)
+        Session.commit()
+    elif inspect(workflow).persistent:
         workflow_resource = WorkflowResource(
             workflow_id=workflow.id_,
             resource_id=disk_resource.id_,
-            quantity_used=disk_bytes,
+            quantity_used=_get_disk_usage_or_zero(workflow),
         )
         Session.add(workflow_resource)
-    Session.commit()
+        Session.commit()
+
     return workflow_resource
