@@ -242,6 +242,12 @@ class User(Base, Timestamp, QuotaBase):
                 )
             )
 
+    def has_exceeded_quota(self):
+        """Get whether user has exceeded the quota of any resource."""
+        return any(
+            r.quota_limit != 0 and r.quota_used >= r.quota_limit for r in self.resources
+        )
+
     def __repr__(self):
         """User string representation."""
         return "<User %r>" % self.id_
