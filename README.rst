@@ -5,14 +5,14 @@ REANA DB
 .. image:: https://img.shields.io/pypi/pyversions/reana-db.svg
       :target: https://pypi.org/pypi/reana-db
 
-.. image:: https://img.shields.io/travis/reanahub/reana-db.svg
-      :target: https://travis-ci.org/reanahub/reana-db
+.. image:: https://github.com/reanahub/reana-db/workflows/CI/badge.svg
+      :target: https://github.com/reanahub/reana-db/actions
 
 .. image:: https://readthedocs.org/projects/reana-db/badge/?version=latest
       :target: https://reana-db.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://img.shields.io/coveralls/reanahub/reana-db.svg
-      :target: https://coveralls.io/r/reanahub/reana-db
+.. image:: https://codecov.io/gh/reanahub/reana-db/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/reanahub/reana-db
 
 .. image:: https://badges.gitter.im/Join%20Chat.svg
       :target: https://gitter.im/reanahub/reana?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
