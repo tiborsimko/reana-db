@@ -737,7 +737,7 @@ class ResourceUnit(enum.Enum):
         units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
         digits = 2
         k = 1024
-        unit_index = math.floor(math.log(bytes_) / math.log(k))
+        unit_index = int(math.floor(math.log(bytes_) / math.log(k)))
 
         converted_value = round(bytes_ / math.pow(k, unit_index), digits)
         return "{converted_value} {converted_unit}".format(
