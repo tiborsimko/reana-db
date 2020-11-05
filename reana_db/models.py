@@ -734,7 +734,7 @@ class ResourceUnit(enum.Enum):
         """Convert bytes usage to human readable string."""
         if bytes_ == 0:
             return "0 Bytes"
-        units = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+        units = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
         digits = 2
         k = 1024
         unit_index = int(math.floor(math.log(bytes_) / math.log(k)))

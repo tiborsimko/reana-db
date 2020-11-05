@@ -240,12 +240,12 @@ def test_user_cpu_usage(db, session, new_user, run_workflow):
         ),
         # Bytes VS human readable
         (ResourceUnit.bytes_, 0, "0 Bytes"),
-        (ResourceUnit.bytes_, 1024 * 35, "35 KB"),
-        (ResourceUnit.bytes_, 1024 * 200 + 512, "200.5 KB"),
-        (ResourceUnit.bytes_, 1024 ** 2, "1 MB"),
-        (ResourceUnit.bytes_, 1024 ** 2 + 1024 * 768, "1.75 MB"),
-        (ResourceUnit.bytes_, 1024 ** 3 * 5 + 1024 ** 2 * 100, "5.1 GB"),
-        (ResourceUnit.bytes_, 1024 ** 4 + 1024 ** 3 * 256, "1.25 TB"),
+        (ResourceUnit.bytes_, 1024 * 35, "35 KiB"),
+        (ResourceUnit.bytes_, 1024 * 200 + 512, "200.5 KiB"),
+        (ResourceUnit.bytes_, 1024 ** 2, "1 MiB"),
+        (ResourceUnit.bytes_, 1024 ** 2 + 1024 * 768, "1.75 MiB"),
+        (ResourceUnit.bytes_, 1024 ** 3 * 5 + 1024 ** 2 * 100, "5.1 GiB"),
+        (ResourceUnit.bytes_, 1024 ** 4 + 1024 ** 3 * 256, "1.25 TiB"),
     ],
 )
 def test_human_readable_unit_values(unit, value, human_readable_string):

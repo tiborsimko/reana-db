@@ -4,7 +4,7 @@ Changes
 Version master (UNRELEASED)
 ---------------------------
 
-- Adds disk usage retreival methods to user and workflow models.
+- Adds new disk usage retrieval methods using canonical (bytes) and human-readable (KiB) units. (``User``, ``Workflow``)
 
 Version 0.7.0 (2020-10-20)
 --------------------------
