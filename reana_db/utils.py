@@ -179,39 +179,6 @@ def _get_workflow_by_uuid(workflow_uuid):
     return workflow
 
 
-def update_users_disk_quota(user=None):
-    """Update users disk quota usage.
-
-    :param user: User whose disk quota will be updated. If None, applies to all users.
-    :type user: reana_db.models.User
-
-    """
-    from reana_commons.utils import get_disk_usage
-
-    from reana_db.config import DEFAULT_QUOTA_RESOURCES
-    from reana_db.models import Resource, User, UserResource
-
-    users = [user] if user else User.query.all()
-
-    for u in users:
-        workspace_path = u.get_user_workspace()
-        disk_usage_bytes = get_disk_usage(workspace_path, summarize=True)
-        disk_usage_bytes = int(disk_usage_bytes[0]["size"]["raw"])
-
-        disk_resource = Resource.query.filter_by(
-            name=DEFAULT_QUOTA_RESOURCES["disk"]
-        ).one_or_none()
-
-        if disk_resource:
-            from .database import Session
-
-            user_resource_quota = UserResource.query.filter_by(
-                user_id=u.id_, resource_id=disk_resource.id_
-            ).first()
-            user_resource_quota.quota_used = disk_usage_bytes
-            Session.commit()
-
-
 def get_default_quota_resource(resource_type):
     """
     Get default quota resource by given resource type.
@@ -230,12 +197,55 @@ def get_default_quota_resource(resource_type):
     return Resource.query.filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type]).one()
 
 
-def store_workflow_disk_quota(workflow):
+def update_users_disk_quota(user=None, bytes_to_sum=None):
+    """Update users disk quota usage.
+
+    :param user: User whose disk quota will be updated. If None, applies to all users.
+    :param bytes_to_sum: Amount of bytes to sum to user disk quota,
+        if None, `du` will be used to recalculate it.
+
+    :type user: reana_db.models.User
+    :type bytes_to_sum: int
+
+    """
+    from reana_commons.utils import get_disk_usage
+
+    from reana_db.config import DEFAULT_QUOTA_RESOURCES
+    from reana_db.models import Resource, User, UserResource
+
+    users = [user] if user else User.query.all()
+
+    for u in users:
+        disk_resource = Resource.query.filter_by(
+            name=DEFAULT_QUOTA_RESOURCES["disk"]
+        ).one_or_none()
+
+        if disk_resource:
+            from .database import Session
+
+            user_resource_quota = UserResource.query.filter_by(
+                user_id=u.id_, resource_id=disk_resource.id_
+            ).first()
+            if bytes_to_sum:
+                user_resource_quota.quota_used += bytes_to_sum
+            else:
+                workspace_path = u.get_user_workspace()
+                disk_usage_bytes = get_disk_usage(workspace_path, summarize=True)
+                disk_usage_bytes = int(disk_usage_bytes[0]["size"]["raw"])
+                user_resource_quota.quota_used = disk_usage_bytes
+            Session.commit()
+
+
+def store_workflow_disk_quota(workflow, bytes_to_sum=None):
     """
     Update or create disk workflow resource.
 
     :param workflow: Workflow whose disk resource usage must be calculated.
+    :param bytes_to_sum: Amount of bytes to sum to workflow disk quota,
+        if None, `du` will be used to recalculate it.
+
     :type workflow: reana_db.models.Workflow
+    :type bytes_to_sum: int
     """
     from reana_commons.errors import REANAMissingWorkspaceError
     from reana_commons.utils import get_disk_usage
@@ -259,7 +269,10 @@ def store_workflow_disk_quota(workflow):
     )
 
     if workflow_resource:
-        workflow_resource.quota_used = _get_disk_usage_or_zero(workflow)
+        if bytes_to_sum:
+            workflow_resource.quota_used += bytes_to_sum
+        else:
+            workflow_resource.quota_used = _get_disk_usage_or_zero(workflow)
         Session.commit()
     elif inspect(workflow).persistent:
         workflow_resource = WorkflowResource(
