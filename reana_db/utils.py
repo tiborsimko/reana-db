@@ -124,7 +124,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
                 "REANA_WORKON is set to {0}, but "
                 "that workflow does not exist. "
                 "Please set your REANA_WORKON environment "
-                "variable appropriately.".format(workflow_name, run_number)
+                "variable appropriately.".format(workflow_name)
             )
 
         return workflow
