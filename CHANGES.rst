@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 0.7.1 (UNRELEASED)
+--------------------------
+
+- Adds support for Python 3.9.
+- Fixes minor code warnings.
+
 Version 0.7.0 (2020-10-20)
 --------------------------
 
