@@ -44,7 +44,6 @@ def run_workflow(session, new_user):
 
     def _run_workflow(time_elapsed_seconds=0.5):
         """Mock a workflow run."""
-        now = datetime.now()
         id_ = uuid4()
         workflow = Workflow(
             id_=str(id_),

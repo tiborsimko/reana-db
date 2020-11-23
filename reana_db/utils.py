@@ -126,7 +126,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
                 "REANA_WORKON is set to {0}, but "
                 "that workflow does not exist. "
                 "Please set your REANA_WORKON environment "
-                "variable appropriately.".format(workflow_name, run_number)
+                "variable appropriately.".format(workflow_name)
             )
 
         return workflow
@@ -258,7 +258,7 @@ def store_workflow_disk_quota(workflow, bytes_to_sum=None):
         try:
             disk_bytes = get_disk_usage(workflow.workspace_path, summarize=True)
             return int(disk_bytes[0]["size"]["raw"])
-        except REANAMissingWorkspaceError as e:
+        except REANAMissingWorkspaceError:
             return 0
 
     disk_resource = get_default_quota_resource(ResourceType.disk.name)

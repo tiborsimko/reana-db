@@ -7,6 +7,12 @@ Version master (UNRELEASED)
 - Adds new disk usage retrieval methods using canonical (bytes) and human-readable (KiB) units. (``User``, ``Workflow``)
 - Changes disk quota calculation functions to allow passing raw bytes to increase the used quota.
 
+Version 0.7.1 (UNRELEASED)
+--------------------------
+
+- Adds support for Python 3.9.
+- Fixes minor code warnings.
+
 Version 0.7.0 (2020-10-20)
 --------------------------
 

@@ -64,6 +64,10 @@ check_black () {
     black --check .
 }
 
+check_flake8 () {
+    flake8 .
+}
+
 check_manifest () {
     check-manifest
 }
@@ -83,6 +87,7 @@ check_all () {
     check_script
     check_pydocstyle
     check_black
+    check_flake8
     check_manifest
     check_sphinx
     check_pytest
@@ -99,6 +104,7 @@ do
         --check-shellscript) check_script;;
         --check-pydocstyle) check_pydocstyle;;
         --check-black) check_black;;
+        --check-flake8) check_flake8;;
         --check-manifest) check_manifest;;
         --check-sphinx) check_sphinx;;
         --check-pytest) check_pytest;;
