@@ -11,10 +11,12 @@
 from uuid import uuid4
 
 import pytest
+import mock
 
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
+    JobStatus,
     UserTokenStatus,
     UserTokenType,
     Workflow,
@@ -184,3 +186,37 @@ def test_access_token(db, session, new_user):
 
     # Status of most recent access token
     assert new_user.access_token_status == UserTokenStatus.active.name
+
+
+@pytest.mark.parametrize(
+    "REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES, job_status, should_cleanup, class_, emits_warning",
+    [
+        (["failed", "finished"], WorkflowStatus.finished, False, WorkflowStatus, False),
+        (["failed"], WorkflowStatus.finished, True, WorkflowStatus, False),
+        (["failed"], "finished", True, WorkflowStatus, False),
+        (["failed", "finished"], JobStatus.finished, False, JobStatus, False),
+        (["failed"], JobStatus.failed, False, JobStatus, False),
+        (["failed"], "failed", False, JobStatus, False),
+        (["faild"], "failed", True, JobStatus, True),
+        ([], "failed", True, JobStatus, False),
+    ],
+)
+def test_should_cleanup_job(
+    REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
+    job_status,
+    should_cleanup,
+    class_,
+    emits_warning,
+    caplog,
+):
+    """Test logic to determine whether jobs should be cleaned up depending on their status."""
+    with mock.patch(
+        "reana_db.models.REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES",
+        REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
+    ):
+        assert class_.should_cleanup_job(job_status) == should_cleanup
+        if emits_warning:
+            assert any(
+                s in caplog.text
+                for s in REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES
+            )

@@ -45,7 +45,7 @@ install_requires = [
     'sqlalchemy-utils>=0.35.0 ; python_version>="3"',
     'sqlalchemy-utils<=0.36.3 ; python_version=="2.7"',
     "cryptography>=2.9.2",  # Required by sqlalchemy_utils.EncryptedType
-    "reana-commons>=0.7.0a1,<0.8.0",
+    "reana-commons>=0.7.3,<0.8.0",
 ]
 
 packages = find_packages()

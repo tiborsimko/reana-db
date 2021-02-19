@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 import enum
 import uuid
+import logging
 
 from sqlalchemy import (
     Boolean,
@@ -30,6 +31,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+
+from reana_commons.config import REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES
 
 from reana_db.config import DB_SECRET_KEY
 from reana_db.utils import build_workspace_path
@@ -192,7 +195,28 @@ class UserToken(Base, Timestamp):
     type_ = Column(Enum(UserTokenType), nullable=False)
 
 
-class WorkflowStatus(enum.Enum):
+class CleanUpDependingOnStatusMixin:
+    """Mixin to determine whether to clean up jobs for REANA status enums."""
+
+    @classmethod
+    def should_cleanup_job(cls, job_status):
+        """Determine if a job/workflow should be cleaned up depending on its status."""
+        job_status_name = (
+            job_status.name if isinstance(job_status, enum.Enum) else job_status
+        )
+        keep_on_status_set = set(REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES)
+        all_statuses_list = [s.name for s in cls]
+        if not keep_on_status_set.issubset(all_statuses_list):
+            logging.warning(
+                "The configuration variable REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES contains "
+                "unknown statuses {} which will be ignored, possibly causing jobs not to be cleaned up.".format(
+                    keep_on_status_set.difference(all_statuses_list)
+                )
+            )
+        return not (job_status_name in keep_on_status_set)
+
+
+class WorkflowStatus(CleanUpDependingOnStatusMixin, enum.Enum):
     """Enumeration of possible workflow statuses."""
 
     created = 0
@@ -224,7 +248,7 @@ ALLOWED_WORKFLOW_STATUS_TRANSITIONS = [
 ]
 
 
-class JobStatus(enum.Enum):
+class JobStatus(CleanUpDependingOnStatusMixin, enum.Enum):
     """Enumeration of possible job statuses."""
 
     created = 0
