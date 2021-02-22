@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 0.7.2 (2021-02-22)
+--------------------------
+
+- Adds utility to status enums to decide whether to clean workflows and jobs depending on their status.
+
 Version 0.7.1 (2021-02-02)
 --------------------------
 
