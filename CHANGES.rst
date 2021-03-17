@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 0.7.3 (2021-03-17)
+--------------------------
+
+- Fixes REANA installation by pinning SQLAlchemy version less than 1.4.0 due to https://github.com/kvesteri/sqlalchemy-utils/issues/505.
+
 Version 0.7.2 (2021-02-22)
 --------------------------
 
