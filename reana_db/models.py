@@ -293,12 +293,19 @@ class RunStatus(enum.Enum):
     deleted = 4
     stopped = 5
     queued = 6
+    pending = 7
 
 
 ALLOWED_WORKFLOW_STATUS_TRANSITIONS = [
-    # Creation
+    # Created
     (RunStatus.created, RunStatus.deleted),
-    (RunStatus.created, RunStatus.running),
+    (RunStatus.created, RunStatus.queued),
+    # Queued
+    (RunStatus.queued, RunStatus.deleted),
+    (RunStatus.queued, RunStatus.pending),
+    # Pending
+    (RunStatus.pending, RunStatus.running),
+    (RunStatus.pending, RunStatus.deleted),
     # Running
     (RunStatus.running, RunStatus.failed),
     (RunStatus.running, RunStatus.finished),
