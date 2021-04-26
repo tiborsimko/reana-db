@@ -663,8 +663,27 @@ class Job(Base, Timestamp):
     env_vars = Column(JSONType)
     deleted = Column(Boolean)
     logs = Column(String, nullable=True)
+    started_at = Column(DateTime)
+    finished_at = Column(DateTime)
     prettified_cmd = Column(JSONType)
     job_name = Column(Text)
+
+
+@event.listens_for(Job.status, "set")
+def job_status_change_listener(job, new_status, old_status, initiator):
+    """Job status change listener."""
+    if new_status != old_status:
+        from .database import Session
+
+        if new_status in [
+            JobStatus.finished,
+            JobStatus.failed,
+        ]:
+            job.finished_at = datetime.now()
+        elif new_status in [JobStatus.running]:
+            job.started_at = datetime.now()
+
+        Session.commit()
 
 
 class JobCache(Base, Timestamp):

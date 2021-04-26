@@ -5,6 +5,7 @@ Version master (UNRELEASED)
 ---------------------------
 
 - Adds new disk usage retrieval methods using canonical (bytes) and human-readable (KiB) units. (``User``, ``Workflow``)
+- Adds new properties ``started_at`` and ``finished_at`` to the ``Job`` model, updated on status change.
 - Changes disk quota calculation functions to allow passing raw bytes to increase the used quota.
 
 Version 0.7.1 (2021-02-02)
