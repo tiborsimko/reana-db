@@ -11,13 +11,14 @@
 from uuid import uuid4
 
 import pytest
-from mock import patch
+import mock
 
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
     ResourceUnit,
     ResourceType,
+    JobStatus,
     UserTokenStatus,
     UserTokenType,
     Workflow,
@@ -82,7 +83,9 @@ def test_workflow_run_number_assignment(db, session, new_user):
     assert first_workflow_second_restart.run_number == 1.2
 
 
-@patch("reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}])
+@mock.patch(
+    "reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}]
+)
 @pytest.mark.parametrize(
     "from_status, to_status, can_transition",
     [
@@ -203,7 +206,9 @@ def test_access_token(db, session, new_user):
     assert new_user.access_token_status == UserTokenStatus.active.name
 
 
-@patch("reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}])
+@mock.patch(
+    "reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}]
+)
 def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
     time_elapsed_seconds = 0.5
@@ -219,7 +224,9 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     assert cpu_milliseconds >= time_elapsed_seconds * 1000
 
 
-@patch("reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}])
+@mock.patch(
+    "reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}]
+)
 def test_user_cpu_usage(db, session, new_user, run_workflow):
     """Test aggregated CPU usage per user."""
     time_elapsed_seconds = 0.5
@@ -261,3 +268,37 @@ def test_user_cpu_usage(db, session, new_user, run_workflow):
 def test_human_readable_unit_values(unit, value, human_readable_string):
     """Test converting units from canonical values to human-readable string."""
     assert ResourceUnit.human_readable_unit(unit, value) == human_readable_string
+
+
+@pytest.mark.parametrize(
+    "REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES, job_status, should_cleanup, class_, emits_warning",
+    [
+        (["failed", "finished"], RunStatus.finished, False, RunStatus, False),
+        (["failed"], RunStatus.finished, True, RunStatus, False),
+        (["failed"], "finished", True, RunStatus, False),
+        (["failed", "finished"], JobStatus.finished, False, JobStatus, False),
+        (["failed"], JobStatus.failed, False, JobStatus, False),
+        (["failed"], "failed", False, JobStatus, False),
+        (["faild"], "failed", True, JobStatus, True),
+        ([], "failed", True, JobStatus, False),
+    ],
+)
+def test_should_cleanup_job(
+    REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
+    job_status,
+    should_cleanup,
+    class_,
+    emits_warning,
+    caplog,
+):
+    """Test logic to determine whether jobs should be cleaned up depending on their status."""
+    with mock.patch(
+        "reana_db.models.REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES",
+        REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
+    ):
+        assert class_.should_cleanup_job(job_status) == should_cleanup
+        if emits_warning:
+            assert any(
+                s in caplog.text
+                for s in REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES
+            )

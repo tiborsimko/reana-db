@@ -1,12 +1,22 @@
 Changes
 =======
 
-Version master (UNRELEASED)
+Version 0.8.0 (UNRELEASED)
 ---------------------------
 
 - Adds new disk usage retrieval methods using canonical (bytes) and human-readable (KiB) units. (``User``, ``Workflow``)
 - Adds new properties ``started_at`` and ``finished_at`` to the ``Job`` model, updated on status change.
 - Changes disk quota calculation functions to allow passing raw bytes to increase the used quota.
+
+Version 0.7.3 (2021-03-17)
+--------------------------
+
+- Fixes REANA installation by pinning SQLAlchemy version less than 1.4.0 due to https://github.com/kvesteri/sqlalchemy-utils/issues/505.
+
+Version 0.7.2 (2021-02-22)
+--------------------------
+
+- Adds utility to status enums to decide whether to clean workflows and jobs depending on their status.
 
 Version 0.7.1 (2021-02-02)
 --------------------------
