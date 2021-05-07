@@ -78,7 +78,7 @@ def upgrade():
 
 
 def downgrade():
-    """Downgrade to previous revision (none in this case)."""
+    """Downgrade to c912d4f1e1cc revision."""
     op.add_column(
         "workflow",
         sa.Column("interactive_session", sa.TEXT(), autoincrement=False, nullable=True),
