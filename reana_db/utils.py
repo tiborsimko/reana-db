@@ -230,10 +230,21 @@ def update_users_disk_quota(user=None, bytes_to_sum=None):
                 user_resource_quota.quota_used += bytes_to_sum
             else:
                 workspace_path = u.get_user_workspace()
-                disk_usage_bytes = get_disk_usage(workspace_path, summarize=True)
-                disk_usage_bytes = int(disk_usage_bytes[0]["size"]["raw"])
+                disk_usage_bytes = get_disk_usage_or_zero(workspace_path)
                 user_resource_quota.quota_used = disk_usage_bytes
             Session.commit()
+
+
+def get_disk_usage_or_zero(workspace_path):
+    """Get disk usage for the workspace if exists, zero if not."""
+    from reana_commons.utils import get_disk_usage
+    from reana_commons.errors import REANAMissingWorkspaceError
+
+    try:
+        disk_bytes = get_disk_usage(workspace_path, summarize=True)
+        return int(disk_bytes[0]["size"]["raw"])
+    except REANAMissingWorkspaceError:
+        return 0
 
 
 def store_workflow_disk_quota(workflow, bytes_to_sum=None):
@@ -247,19 +258,8 @@ def store_workflow_disk_quota(workflow, bytes_to_sum=None):
     :type workflow: reana_db.models.Workflow
     :type bytes_to_sum: int
     """
-    from reana_commons.errors import REANAMissingWorkspaceError
-    from reana_commons.utils import get_disk_usage
-
     from reana_db.database import Session
     from reana_db.models import ResourceType, WorkflowResource
-
-    def _get_disk_usage_or_zero(workflow):
-        """Get disk usage for a workflow if the workspace exists, zero if not."""
-        try:
-            disk_bytes = get_disk_usage(workflow.workspace_path, summarize=True)
-            return int(disk_bytes[0]["size"]["raw"])
-        except REANAMissingWorkspaceError:
-            return 0
 
     disk_resource = get_default_quota_resource(ResourceType.disk.name)
     workflow_resource = (
@@ -272,13 +272,15 @@ def store_workflow_disk_quota(workflow, bytes_to_sum=None):
         if bytes_to_sum:
             workflow_resource.quota_used += bytes_to_sum
         else:
-            workflow_resource.quota_used = _get_disk_usage_or_zero(workflow)
+            workflow_resource.quota_used = get_disk_usage_or_zero(
+                workflow.workspace_path
+            )
         Session.commit()
     elif inspect(workflow).persistent:
         workflow_resource = WorkflowResource(
             workflow_id=workflow.id_,
             resource_id=disk_resource.id_,
-            quota_used=_get_disk_usage_or_zero(workflow),
+            quota_used=get_disk_usage_or_zero(workflow.workspace_path),
         )
         Session.add(workflow_resource)
         Session.commit()
