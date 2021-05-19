@@ -46,6 +46,7 @@ install_requires = [
     'sqlalchemy-utils<=0.36.3 ; python_version=="2.7"',
     "cryptography>=2.9.2",  # Required by sqlalchemy_utils.EncryptedType
     "reana-commons>=0.8.0a8,<0.9.0",
+    'websocket-client==0.59.0 ; python_version=="2.7"',  # pin due to py2 support drop
 ]
 
 packages = find_packages()
