@@ -38,6 +38,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_LIMITS, DEFAULT_QUOTA_RESOURCES
 from reana_db.utils import (
@@ -416,6 +417,7 @@ class Workflow(Base, Timestamp, QuotaBase):
     reana_specification = Column(JSONType)
     input_parameters = Column(JSONType)
     operational_options = Column(JSONType)
+    complexity = Column(ARRAY(BigInteger(), dimensions=2), default=[])
     type_ = Column(String(30))
     logs = Column(String)
     run_started_at = Column(DateTime)
@@ -462,6 +464,7 @@ class Workflow(Base, Timestamp, QuotaBase):
         input_parameters={},
         operational_options={},
         status=RunStatus.created,
+        complexity=[],
         git_ref="",
         git_repo=None,
         git_provider=None,
@@ -477,6 +480,7 @@ class Workflow(Base, Timestamp, QuotaBase):
         self.reana_specification = reana_specification
         self.input_parameters = input_parameters
         self.operational_options = operational_options
+        self.complexity = complexity
         self.type_ = type_
         self.logs = logs or ""
         self.git_ref = git_ref
