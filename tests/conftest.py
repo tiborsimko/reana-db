@@ -42,7 +42,7 @@ def new_user(session, db):
 def run_workflow(session, new_user):
     """Mocked workflow run factory."""
 
-    def _run_workflow(time_elapsed_seconds=0.5):
+    def _run_workflow(time_elapsed_seconds=0.5, finish=True):
         """Mock a workflow run."""
         id_ = uuid4()
         workflow = Workflow(
@@ -65,8 +65,11 @@ def run_workflow(session, new_user):
             def now(cls):
                 return termination_value
 
-        with mock.patch("reana_db.models.datetime", MockDatetime):
-            Workflow.update_workflow_status(session, workflow.id_, RunStatus.finished)
+        if finish:
+            with mock.patch("reana_db.models.datetime", MockDatetime):
+                Workflow.update_workflow_status(
+                    session, workflow.id_, RunStatus.finished
+                )
         return workflow
 
     return _run_workflow

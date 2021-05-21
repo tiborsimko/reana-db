@@ -302,3 +302,58 @@ def test_should_cleanup_job(
                 s in caplog.text
                 for s in REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES
             )
+
+
+@pytest.mark.parametrize(
+    "running_workflows, REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,  priority",
+    [
+        (2, 10, 0.8),
+        (3, 10, 0.7),
+        (4, 10, 0.6),
+        (11, 10, 0),
+        (15, 30, 0.5),
+        (12, 30, 0.6),
+        (30, 30, 0),
+        (17, 50, 0.66),
+        (7, 64, 0.89),
+    ],
+)
+def test_get_workflow_overload_priority(
+    run_workflow, running_workflows, REANA_MAX_CONCURRENT_BATCH_WORKFLOWS, priority,
+):
+    """Test logic to determine workflow overload priority factor based on running workflows."""
+    with mock.patch(
+        "reana_db.models.REANA_MAX_CONCURRENT_BATCH_WORKFLOWS",
+        REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,
+    ):
+        for _ in range(running_workflows):
+            workflow = run_workflow(finish=False)
+
+        assert workflow.owner.get_workflow_overload_priority() == priority
+
+
+@pytest.mark.parametrize(
+    "complexity,priority,cluster_memory",
+    [
+        ([(1, 8589934592.0), (2, 4294967296.0), (5, 4294967296.0)], 55, 85899345920.0),
+        ([(2, 8)], 96, 400),
+        ([(1, 6), (1, 6)], 97, 400),
+        ([(5, 2), (5, 2)], 95, 400),
+        ([(1, 396)], 1, 400),
+        ([(1, 401)], 0, 400),
+        ([], 0, 100),
+        ([(3, 5), (1, 5)], 80, 100),
+        ([(3, 20), (2, 10)], 20, 100),
+        ([(2, 20), (5, 1)], 55, 100),
+        ([(1, 1), (1, 1)], 98, 100),
+        ([(1, 10), (1, 20), (1, 5), (1, 5), (1, 10), (1, 10)], 40, 100),
+    ],
+)
+def test_get_workflow_complexity_priority(
+    run_workflow, session, complexity, priority, cluster_memory
+):
+    """Test ``get_complexity_priority``."""
+    workflow = run_workflow(finish=False)
+    workflow.complexity = complexity
+    session.commit()
+    assert workflow.get_complexity_priority(cluster_memory) == priority

@@ -12,11 +12,16 @@ from __future__ import absolute_import
 
 import enum
 import math
+import logging
 import uuid
 from datetime import datetime
-import logging
+from functools import reduce
 
-from reana_commons.config import REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES
+from reana_commons.config import (
+    MQ_MAX_PRIORITY,
+    REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,
+    REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
+)
 from reana_commons.utils import get_disk_usage
 from sqlalchemy import (
     BigInteger,
@@ -31,6 +36,7 @@ from sqlalchemy import (
     UniqueConstraint,
     event,
     func,
+    or_,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -251,6 +257,22 @@ class User(Base, Timestamp, QuotaBase):
         return any(
             r.quota_limit != 0 and r.quota_used >= r.quota_limit for r in self.resources
         )
+
+    def get_workflow_overload_priority(self):
+        """Get priority factor based on the number of current workflows ``running``."""
+        max_concurrent_workflows = REANA_MAX_CONCURRENT_BATCH_WORKFLOWS
+        running_count = self.workflows.filter(
+            or_(
+                Workflow.status == RunStatus.pending,
+                Workflow.status == RunStatus.running,
+            )
+        ).count()
+        # to avoid py27 floor division between integers
+        running_count = float(running_count)
+        if running_count > max_concurrent_workflows:
+            return 0
+        priority = round(1 - running_count / max_concurrent_workflows, 2)
+        return priority
 
     def __repr__(self):
         """User string representation."""
@@ -584,6 +606,30 @@ class Workflow(Base, Timestamp, QuotaBase):
             )
 
         return [{"name": "", "size": disk_usage}]
+
+    def get_priority(self, cluster_memory):
+        """Workflow priority when scheduling it.
+
+        Takes into account both the workflow complexity and the number of workflows
+        ``running`` at a certain time.
+        """
+        return round(
+            self.owner.get_workflow_overload_priority()
+            * self.get_complexity_priority(cluster_memory)
+        )
+
+    def get_complexity_priority(self, total_cluster_memory):
+        """Calculate workflow priority based on its complexity."""
+        if not self.complexity:
+            return 0
+        wf_memory = int(
+            reduce(lambda sum, item: sum + item[0] * item[1], self.complexity, 0)
+        )
+        if not total_cluster_memory or wf_memory > total_cluster_memory:
+            return 0
+        # to avoid py27 floor division between integers
+        wf_memory = float(wf_memory)
+        return int(round(1 - wf_memory / total_cluster_memory, 2) * MQ_MAX_PRIORITY)
 
     @staticmethod
     def update_workflow_status(
