@@ -583,7 +583,7 @@ class Workflow(Base, Timestamp, QuotaBase):
         """Return full workflow name including run number."""
         return "{}.{}".format(self.name, str(self.run_number))
 
-    def get_workspace_disk_usage(self, summarize=False):
+    def get_workspace_disk_usage(self, summarize=False, search=None):
         """Retrieve disk usage information of a workspace."""
         from functools import partial
 
@@ -592,6 +592,7 @@ class Workflow(Base, Timestamp, QuotaBase):
             return get_disk_usage(
                 self.workspace_path,
                 summarize,
+                search,
                 to_human_readable_units=partial(
                     ResourceUnit.human_readable_unit, ResourceUnit.bytes_
                 ),
