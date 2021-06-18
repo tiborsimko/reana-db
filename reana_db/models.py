@@ -270,8 +270,11 @@ class User(Base, Timestamp, QuotaBase):
         # to avoid py27 floor division between integers
         running_count = float(running_count)
         if running_count > max_concurrent_workflows:
-            return 0
-        priority = round(1 - running_count / max_concurrent_workflows, 2)
+            return 0.1
+        # we reduce the 10% (* 0.9) to avoid getting a 0 multiplier factor when
+        # `running_count == `max_concurrent_workflows`, thus taking into
+        # account workflow complexity when workflows are requeued.
+        priority = round(1 - (running_count * 0.9) / max_concurrent_workflows, 2)
         return priority
 
     def __repr__(self):

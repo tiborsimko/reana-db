@@ -307,15 +307,15 @@ def test_should_cleanup_job(
 @pytest.mark.parametrize(
     "running_workflows, REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,  priority",
     [
-        (2, 10, 0.8),
-        (3, 10, 0.7),
-        (4, 10, 0.6),
-        (11, 10, 0),
-        (15, 30, 0.5),
-        (12, 30, 0.6),
-        (30, 30, 0),
-        (17, 50, 0.66),
-        (7, 64, 0.89),
+        (2, 10, 0.82),
+        (3, 10, 0.73),
+        (4, 10, 0.64),
+        (11, 10, 0.1),
+        (15, 30, 0.55),
+        (12, 30, 0.64),
+        (30, 30, 0.1),
+        (17, 50, 0.69),
+        (7, 64, 0.9),
     ],
 )
 def test_get_workflow_overload_priority(
