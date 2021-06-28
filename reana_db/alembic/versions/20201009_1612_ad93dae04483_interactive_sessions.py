@@ -35,6 +35,7 @@ def upgrade():
                 "deleted",
                 "stopped",
                 "queued",
+                "pending",
                 name="runstatus",
             ),
             nullable=False,
@@ -76,6 +77,13 @@ def upgrade():
     op.drop_column("workflow", "interactive_session_type", schema="__reana")
     op.drop_column("workflow", "interactive_session", schema="__reana")
 
+    # Change `Workflow.status` type from `workflowstatus` to `runstatus`.
+    op.execute(
+        "ALTER TABLE __reana.workflow ALTER COLUMN status TYPE runstatus USING status::text::runstatus;"
+    )
+    # Remove old `workflowstatus` data type.
+    op.execute("DROP TYPE IF EXISTS workflowstatus;")
+
 
 def downgrade():
     """Downgrade to c912d4f1e1cc revision."""
@@ -101,3 +109,15 @@ def downgrade():
     op.drop_table("workflow_session", schema="__reana")
     op.drop_table("interactive_session_resource", schema="__reana")
     op.drop_table("interactive_session", schema="__reana")
+
+    # Create `workflowstatus` type without `pending` value.
+    op.execute(
+        "CREATE TYPE workflowstatus AS ENUM ('created', 'running', 'finished', 'failed', 'deleted', 'stopped', 'queued');"
+    )
+    # Change `Workflow.status` type from `runstatus` to `workflowstatus`.
+    op.execute(
+        "ALTER TABLE __reana.workflow ALTER COLUMN status TYPE workflowstatus USING status::text::workflowstatus;"
+    )
+    # Remove `runstatus` and `interactivesessiontype` data types.
+    op.execute("DROP TYPE IF EXISTS runstatus;")
+    op.execute("DROP TYPE IF EXISTS interactivesessiontype;")
