@@ -19,8 +19,7 @@ readme = open("README.rst").read()
 history = open("CHANGES.rst").read()
 
 tests_require = [
-    "pytest-reana>=0.8.0a2,<0.9.0",
-    'google-auth<=1.24.0 ; python_version=="2.7"',
+    "pytest-reana>=0.8.0a5,<0.9.0",
 ]
 
 extras_require = {
@@ -42,11 +41,9 @@ install_requires = [
     "alembic>=1.4.2",
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=1.2.7,<1.4.0",
-    'sqlalchemy-utils>=0.35.0 ; python_version>="3"',
-    'sqlalchemy-utils<=0.36.3 ; python_version=="2.7"',
+    "sqlalchemy-utils>=0.35.0",
     "cryptography>=2.9.2",  # Required by sqlalchemy_utils.EncryptedType
-    "reana-commons>=0.8.0a14,<0.9.0",
-    'websocket-client==0.59.0 ; python_version=="2.7"',  # pin due to py2 support drop
+    "reana-commons>=0.8.0a19,<0.9.0",
 ]
 
 packages = find_packages()
@@ -81,8 +78,6 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
