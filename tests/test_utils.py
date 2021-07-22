@@ -10,9 +10,15 @@
 
 from __future__ import absolute_import, print_function
 
+import os
+
+from reana_commons.config import SHARED_VOLUME_PATH
+
 
 def test_build_workspace_path():
     """Tests for build_workspace_path()."""
     from reana_db.utils import build_workspace_path
 
-    assert build_workspace_path(0) == "users/0/workflows"
+    assert build_workspace_path(0) == os.path.join(
+        SHARED_VOLUME_PATH, "users/0/workflows"
+    )

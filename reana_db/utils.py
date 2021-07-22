@@ -13,16 +13,25 @@ from uuid import UUID
 from sqlalchemy import inspect
 
 
-def build_workspace_path(user_id, workflow_id=None):
+def build_workspace_path(user_id, workflow_id=None, workspace_root_path=None):
     """Build user's workspace relative path.
 
     :param user_id: Owner of the workspace.
     :param workflow_id: Optional parameter, if provided gives the path to the
         workflow workspace instead of just the path to the user workspace.
-    :return: String that represents the workspace relative path.
-        i.e. users/0000/workflows/0034
+    :param workspace_root_path: Optional parameter, if provided changes the
+        root path under which the workflow workspaces are stored.
+    :return: String that represents the workspace absolute path.
+        i.e. /var/reana/users/0000/workflows/0034
     """
-    workspace_path = os.path.join("users", str(user_id), "workflows")
+    from reana_commons.config import SHARED_VOLUME_PATH
+
+    if workspace_root_path:
+        workspace_path = workspace_root_path
+    else:
+        workspace_path = os.path.join(
+            SHARED_VOLUME_PATH, "users", str(user_id), "workflows"
+        )
     if workflow_id:
         workspace_path = os.path.join(workspace_path, str(workflow_id))
 
