@@ -267,8 +267,6 @@ class User(Base, Timestamp, QuotaBase):
                 Workflow.status == RunStatus.running,
             )
         ).count()
-        # to avoid py27 floor division between integers
-        running_count = float(running_count)
         if running_count > max_concurrent_workflows:
             return 0.1
         # we reduce the 10% (* 0.9) to avoid getting a 0 multiplier factor when
@@ -631,8 +629,6 @@ class Workflow(Base, Timestamp, QuotaBase):
         )
         if not total_cluster_memory or wf_memory > total_cluster_memory:
             return 0
-        # to avoid py27 floor division between integers
-        wf_memory = float(wf_memory)
         return int(round(1 - wf_memory / total_cluster_memory, 2) * MQ_MAX_PRIORITY)
 
     @staticmethod
