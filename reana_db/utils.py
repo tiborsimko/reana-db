@@ -24,13 +24,13 @@ def build_workspace_path(user_id, workflow_id=None, workspace_root_path=None):
     :return: String that represents the workspace absolute path.
         i.e. /var/reana/users/0000/workflows/0034
     """
-    from reana_commons.config import SHARED_VOLUME_PATH
+    from reana_commons.config import DEFAULT_WORKSPACE_PATH
 
     if workspace_root_path:
         workspace_path = workspace_root_path
     else:
         workspace_path = os.path.join(
-            SHARED_VOLUME_PATH, "users", str(user_id), "workflows"
+            DEFAULT_WORKSPACE_PATH, "users", str(user_id), "workflows"
         )
     if workflow_id:
         workspace_path = os.path.join(workspace_path, str(workflow_id))
