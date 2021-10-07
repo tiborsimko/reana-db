@@ -8,6 +8,7 @@ Version 0.8.0 (UNRELEASED)
 - Adds new properties ``started_at`` and ``finished_at`` to the ``Job`` model, updated on status change.
 - Adds ``get_priority`` workflow method, that combines both complexity and concurrency, to pass to the scheduler.
 - Changes disk quota calculation functions to allow passing raw bytes to increase the used quota.
+- Changes to PostgreSQL 12.8.
 - Removes support for Python 2.
 
 Version 0.7.3 (2021-03-17)
