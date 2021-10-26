@@ -9,6 +9,7 @@
 """REANA DB configuration."""
 
 import os
+from enum import Enum
 
 from reana_commons.config import REANA_INFRASTRUCTURE_COMPONENTS_HOSTNAMES
 
@@ -62,6 +63,18 @@ SQLALCHEMY_POOL_SIZE = int(float(os.getenv("SQLALCHEMY_POOL_SIZE", 5)))
 SQLALCHEMY_POOL_TIMEOUT = int(float(os.getenv("SQLALCHEMY_POOL_TIMEOUT", 30)))
 """How many seconds to wait when retrieving a new connection from the pool?"""
 
+
+class QuotaResourceType(str, Enum):
+    """Possible quota policies.
+
+    Example:
+        QuotaPolicy.cpu == "cpu"  # True
+    """
+
+    cpu = "cpu"
+    disk = "disk"
+
+
 DEFAULT_QUOTA_RESOURCES = {
     "cpu": "processing time",
     "disk": "shared storage",
@@ -73,3 +86,10 @@ DEFAULT_QUOTA_LIMITS = {
     "disk": int(float(os.getenv("REANA_DEFAULT_QUOTA_DISK_LIMIT", 0))),
 }
 """Default CPU (in milliseconds) and disk (in bytes) quota limits."""
+
+
+WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY = os.getenv(
+    "REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+    f"{QuotaResourceType.cpu},{QuotaResourceType.disk}",
+).split(",")
+"""What quota types to update, if not specified all quotas will be calculated, if empty no quotas will be updated."""

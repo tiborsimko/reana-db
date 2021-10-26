@@ -8,9 +8,12 @@
 """REANA-DB utils."""
 
 import os
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import inspect
+
+from reana_db.config import WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY, QuotaResourceType
 
 
 def build_workspace_path(user_id, workflow_id=None, workspace_root_path=None):
@@ -209,7 +212,7 @@ def get_default_quota_resource(resource_type):
     return Resource.query.filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type]).one()
 
 
-def update_users_disk_quota(user=None, bytes_to_sum=None):
+def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> None:
     """Update users disk quota usage.
 
     :param user: User whose disk quota will be updated. If None, applies to all users.
@@ -220,7 +223,8 @@ def update_users_disk_quota(user=None, bytes_to_sum=None):
     :type bytes_to_sum: int
 
     """
-    from reana_commons.utils import get_disk_usage
+    if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+        return
 
     from reana_db.config import DEFAULT_QUOTA_RESOURCES
     from reana_db.models import Resource, User, UserResource
@@ -247,8 +251,11 @@ def update_users_disk_quota(user=None, bytes_to_sum=None):
             Session.commit()
 
 
-def get_disk_usage_or_zero(workspace_path):
+def get_disk_usage_or_zero(workspace_path) -> int:
     """Get disk usage for the workspace if exists, zero if not."""
+    if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+        return 0
+
     from reana_commons.utils import get_disk_usage
     from reana_commons.errors import REANAMissingWorkspaceError
 

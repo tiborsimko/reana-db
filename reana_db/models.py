@@ -46,7 +46,13 @@ from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 from sqlalchemy.dialects.postgresql import ARRAY
 
-from reana_db.config import DB_SECRET_KEY, DEFAULT_QUOTA_LIMITS, DEFAULT_QUOTA_RESOURCES
+from reana_db.config import (
+    DB_SECRET_KEY,
+    DEFAULT_QUOTA_LIMITS,
+    DEFAULT_QUOTA_RESOURCES,
+    WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
+    QuotaResourceType,
+)
 from reana_db.utils import (
     build_workspace_path,
     store_workflow_disk_quota,
@@ -684,10 +690,15 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
     from .database import Session
 
     def _update_disk_quota(workflow):
+        if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+            return
         update_users_disk_quota(user=workflow.owner)
         store_workflow_disk_quota(workflow)
 
     def _update_cpu_quota(workflow):
+        if QuotaResourceType.cpu not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+            return
+
         terminated_at = workflow.run_finished_at or workflow.run_stopped_at
         if workflow.run_started_at and terminated_at:
             cpu_time = terminated_at - workflow.run_started_at
