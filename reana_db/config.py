@@ -88,8 +88,6 @@ DEFAULT_QUOTA_LIMITS = {
 """Default CPU (in milliseconds) and disk (in bytes) quota limits."""
 
 
-WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY = os.getenv(
-    "REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    f"{QuotaResourceType.cpu},{QuotaResourceType.disk}",
-).split(",")
+policies = os.getenv("REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY")
+WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY = policies.split(",") if policies else []
 """What quota types to update, if not specified all quotas will be calculated, if empty no quotas will be updated."""

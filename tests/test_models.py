@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 import mock
 
+from reana_db.config import QuotaResourceType
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
@@ -25,7 +26,6 @@ from reana_db.models import (
     WorkflowResource,
     RunStatus,
 )
-
 from reana_db.utils import get_default_quota_resource
 
 
@@ -209,6 +209,10 @@ def test_access_token(db, session, new_user):
 @mock.patch(
     "reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}]
 )
+@mock.patch(
+    "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+    [QuotaResourceType.cpu.value, QuotaResourceType.disk.value],
+)
 def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
     time_elapsed_seconds = 0.5
@@ -224,6 +228,14 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     assert cpu_milliseconds >= time_elapsed_seconds * 1000
 
 
+@mock.patch(
+    "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+    [QuotaResourceType.cpu.value, QuotaResourceType.disk.value],
+)
+@mock.patch(
+    "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+    [QuotaResourceType.cpu.value, QuotaResourceType.disk.value],
+)
 @mock.patch(
     "reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}]
 )
