@@ -13,7 +13,11 @@ from uuid import UUID
 
 from sqlalchemy import inspect
 
-from reana_db.config import WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY, QuotaResourceType
+from reana_db.config import (
+    CRONJOB_DISK_QUOTA_UPDATE_POLICY,
+    WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
+    QuotaResourceType,
+)
 
 
 def build_workspace_path(user_id, workflow_id=None, workspace_root_path=None):
@@ -223,7 +227,10 @@ def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> No
     :type bytes_to_sum: int
 
     """
-    if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+    if (
+        QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+        and not CRONJOB_DISK_QUOTA_UPDATE_POLICY
+    ):
         return
 
     from reana_db.config import DEFAULT_QUOTA_RESOURCES
@@ -253,7 +260,10 @@ def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> No
 
 def get_disk_usage_or_zero(workspace_path) -> int:
     """Get disk usage for the workspace if exists, zero if not."""
-    if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+    if (
+        QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+        and not CRONJOB_DISK_QUOTA_UPDATE_POLICY
+    ):
         return 0
 
     from reana_commons.utils import get_disk_usage
@@ -266,7 +276,7 @@ def get_disk_usage_or_zero(workspace_path) -> int:
         return 0
 
 
-def store_workflow_disk_quota(workflow, bytes_to_sum=None):
+def store_workflow_disk_quota(workflow, bytes_to_sum: Optional[int] = None):
     """
     Update or create disk workflow resource.
 
@@ -277,6 +287,9 @@ def store_workflow_disk_quota(workflow, bytes_to_sum=None):
     :type workflow: reana_db.models.Workflow
     :type bytes_to_sum: int
     """
+    if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+        return
+
     from reana_db.database import Session
     from reana_db.models import ResourceType, WorkflowResource
 

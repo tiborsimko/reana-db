@@ -9,6 +9,7 @@
 """REANA DB configuration."""
 
 import os
+from distutils.util import strtobool
 from enum import Enum
 
 from reana_commons.config import REANA_INFRASTRUCTURE_COMPONENTS_HOSTNAMES
@@ -91,3 +92,9 @@ DEFAULT_QUOTA_LIMITS = {
 policies = os.getenv("REANA_WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY")
 WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY = policies.split(",") if policies else []
 """What quota types to update, if not specified all quotas will be calculated, if empty no quotas will be updated."""
+
+
+CRONJOB_DISK_QUOTA_UPDATE_POLICY = strtobool(
+    os.getenv("REANA_CRONJOB_DISK_QUOTA_UPDATE_POLICY", "false")
+)
+"""Whether to run the cronjob disk quota updater."""
