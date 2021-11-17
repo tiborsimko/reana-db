@@ -1,13 +1,19 @@
 Changes
 =======
 
-Version 0.8.0 (UNRELEASED)
+Version 0.8.0 (2021-11-22)
 ---------------------------
 
 - Adds new disk usage retrieval methods using canonical (bytes) and human-readable (KiB) units. (``User``, ``Workflow``)
+- Adds Quota models which calculates CPU and disk usage.
+- Adds ``InteractiveSession`` model.
 - Adds new properties ``started_at`` and ``finished_at`` to the ``Job`` model, updated on status change.
 - Adds ``get_priority`` workflow method, that combines both complexity and concurrency, to pass to the scheduler.
 - Adds a possibility to configure database connection pool parameters via environment variables.
+- Adds new ``pending`` state to ``RunStatus`` table.
+- Adds workflow complexity property in ``Workflow`` table.
+- Adds environment variable to configure which quotas to update.
+- Changes ``WorkflowStatus`` table to ``RunStatus``.
 - Changes disk quota calculation functions to allow passing raw bytes to increase the used quota.
 - Changes to PostgreSQL 12.8.
 - Removes support for Python 2.
