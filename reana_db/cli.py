@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020 CERN.
+# Copyright (C) 2020, 2021 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -14,9 +14,15 @@ import sys
 import click
 from alembic import command
 from alembic import config as alembic_config
+
+from reana_db.config import QuotaResourceType
 from reana_db.database import init_db
-from reana_db.models import Resource
-from reana_db.utils import update_users_disk_quota
+from reana_db.models import Resource, Workflow
+from reana_db.utils import (
+    store_workflow_disk_quota,
+    update_users_cpu_quota,
+    update_users_disk_quota,
+)
 
 
 @click.group()
@@ -224,16 +230,27 @@ def create_default_resources():
 
 
 @quota_group.command()
-def disk_usage_update():
-    """Update users disk quota usage based on user workspace."""
-    try:
-        update_users_disk_quota()
-        click.secho("Users disk quota usage updated successfully.", fg="green")
-    except Exception as e:
-        click.secho(
-            "[ERROR]: An error occurred when updating users disk quota usage: {}".format(
-                repr(e)
-            ),
-            fg="red",
-        )
-        sys.exit(1)
+def resource_usage_update() -> None:
+    """Update users disk and CPU quotas."""
+
+    def _resource_usage_update(resource: QuotaResourceType) -> None:
+        """Update users resource quota usage."""
+        try:
+            if resource == QuotaResourceType.disk:
+                update_users_disk_quota()
+                for workflow in Workflow.query.all():
+                    store_workflow_disk_quota(workflow)
+            elif resource == QuotaResourceType.cpu:
+                update_users_cpu_quota()
+            click.secho(
+                f"Users {resource.value} quota usage updated successfully.", fg="green"
+            )
+        except Exception as e:
+            click.secho(
+                f"[ERROR]: An error occurred when updating users {resource} quota usage: {repr(e)}",
+                fg="red",
+            )
+            sys.exit(1)
+
+    _resource_usage_update(QuotaResourceType.disk)
+    _resource_usage_update(QuotaResourceType.cpu)

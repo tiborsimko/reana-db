@@ -56,8 +56,8 @@ from reana_db.config import (
 from reana_db.utils import (
     build_workspace_path,
     store_workflow_disk_quota,
-    get_default_quota_resource,
     update_users_disk_quota,
+    update_workflow_cpu_quota,
 )
 
 
@@ -699,22 +699,7 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
         if QuotaResourceType.cpu not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
             return
 
-        terminated_at = workflow.run_finished_at or workflow.run_stopped_at
-        if workflow.run_started_at and terminated_at:
-            cpu_time = terminated_at - workflow.run_started_at
-            cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
-            cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
-            workflow_resource = WorkflowResource(
-                workflow_id=workflow.id_,
-                resource_id=cpu_resource.id_,
-                quota_used=cpu_milliseconds,
-            )
-            user_resource_quota = UserResource.query.filter_by(
-                user_id=workflow.owner_id, resource_id=cpu_resource.id_
-            ).first()
-            user_resource_quota.quota_used += cpu_milliseconds
-            Session.add(workflow_resource)
-            Session.commit()
+        update_workflow_cpu_quota(workflow=workflow)
 
     workflow.update_workflow_timestamp(new_status)
     if new_status in [

@@ -26,7 +26,7 @@ from reana_db.models import (
     WorkflowResource,
     RunStatus,
 )
-from reana_db.utils import get_default_quota_resource
+from reana_db.utils import get_default_quota_resource, update_users_cpu_quota
 
 
 def test_workflow_run_number_assignment(db, session, new_user):
@@ -251,6 +251,41 @@ def test_user_cpu_usage(db, session, new_user, run_workflow):
         >= num_workflows * time_elapsed_seconds * 1000
     )
     assert new_user.get_quota_usage()["disk"]["usage"]["raw"] == 128
+
+
+@mock.patch(
+    "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", True,
+)
+@pytest.mark.parametrize(
+    "WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+    [([QuotaResourceType.cpu.value]), ([]),],
+)
+def test_all_users_cpu_quota_usage_update(
+    db, session, new_user, run_workflow, WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+):
+    """Test CPU periodic update cronjob functionality.
+
+    Multiple scenarios are tested:
+    - CPU periodic update enabled + CPU workflow termination update policy enabled
+    - CPU periodic update enabled + CPU workflow termination update policy disabled
+    """
+    with mock.patch(
+        "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
+    ):
+        time_elapsed_seconds = 0.5
+        num_workflows = 2
+        for n in range(num_workflows):
+            run_workflow(time_elapsed_seconds=time_elapsed_seconds)
+
+        if not WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+            # verify that workflow termination policy logic is not executed
+            assert new_user.get_quota_usage()["cpu"]["usage"]["raw"] == 0
+        update_users_cpu_quota()
+        assert (
+            new_user.get_quota_usage()["cpu"]["usage"]["raw"]
+            >= num_workflows * time_elapsed_seconds * 1000
+        )
 
 
 @pytest.mark.parametrize(

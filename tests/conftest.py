@@ -40,7 +40,7 @@ def new_user(session, db):
 
 @pytest.fixture
 def run_workflow(session, new_user):
-    """Mocked workflow run factory."""
+    """Mock workflow run factory."""
 
     def _run_workflow(time_elapsed_seconds=0.5, finish=True):
         """Mock a workflow run."""

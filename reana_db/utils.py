@@ -14,7 +14,7 @@ from uuid import UUID
 from sqlalchemy import inspect
 
 from reana_db.config import (
-    CRONJOB_DISK_QUOTA_UPDATE_POLICY,
+    PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY,
     WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
     QuotaResourceType,
 )
@@ -229,7 +229,7 @@ def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> No
     """
     if (
         QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-        and not CRONJOB_DISK_QUOTA_UPDATE_POLICY
+        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
     ):
         return
 
@@ -258,11 +258,94 @@ def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> No
             Session.commit()
 
 
+def update_workflow_cpu_quota(workflow) -> int:
+    """Update workflow CPU quota based on started and finished/stopped times.
+
+    :return: Workflow running time in milliseconds if workflow has terminated, else 0.
+    """
+    from reana_db.database import Session
+
+    from reana_db.models import (
+        ResourceType,
+        UserResource,
+        WorkflowResource,
+    )
+
+    terminated_at = workflow.run_finished_at or workflow.run_stopped_at
+    if workflow.run_started_at and terminated_at:
+        cpu_time = terminated_at - workflow.run_started_at
+        cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
+        cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
+        # WorkflowResource might exist already if the cluster
+        # follows a combined termination + periodic policy (eg. created
+        # by the status listener, revisited by the cronjob)
+        workflow_resource = WorkflowResource.query.filter_by(
+            workflow_id=workflow.id_, resource_id=cpu_resource.id_
+        ).one_or_none()
+        if workflow_resource:
+            workflow_resource.quota_used = cpu_milliseconds
+        else:
+            workflow_resource = WorkflowResource(
+                workflow_id=workflow.id_,
+                resource_id=cpu_resource.id_,
+                quota_used=cpu_milliseconds,
+            )
+            user_resource_quota = UserResource.query.filter_by(
+                user_id=workflow.owner_id, resource_id=cpu_resource.id_
+            ).first()
+            user_resource_quota.quota_used += cpu_milliseconds
+            Session.add(workflow_resource)
+        Session.commit()
+        return cpu_milliseconds
+    return 0
+
+
+def update_users_cpu_quota(user=None) -> None:
+    """Update users CPU quota usage.
+
+    :param user: User whose CPU quota will be updated. If None, applies to all users.
+
+    :type user: reana_db.models.User
+
+    """
+    from reana_db.database import Session
+    from reana_db.models import (
+        ResourceType,
+        User,
+        UserResource,
+        UserToken,
+        UserTokenStatus,
+    )
+
+    if (
+        QuotaResourceType.cpu not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
+    ):
+        return
+
+    if user:
+        users = [user]
+    else:
+        users = User.query.join(UserToken).filter_by(
+            status=UserTokenStatus.active  # skip users with no active token
+        )
+    for user in users:
+        cpu_milliseconds = 0
+        for workflow in user.workflows:
+            cpu_milliseconds += update_workflow_cpu_quota(workflow=workflow)
+        cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
+        user_resource_quota = UserResource.query.filter_by(
+            user_id=user.id_, resource_id=cpu_resource.id_
+        ).first()
+        user_resource_quota.quota_used = cpu_milliseconds
+        Session.commit()
+
+
 def get_disk_usage_or_zero(workspace_path) -> int:
     """Get disk usage for the workspace if exists, zero if not."""
     if (
         QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-        and not CRONJOB_DISK_QUOTA_UPDATE_POLICY
+        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
     ):
         return 0
 
@@ -287,7 +370,10 @@ def store_workflow_disk_quota(workflow, bytes_to_sum: Optional[int] = None):
     :type workflow: reana_db.models.Workflow
     :type bytes_to_sum: int
     """
-    if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+    if (
+        QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
+    ):
         return
 
     from reana_db.database import Session

@@ -94,7 +94,7 @@ WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY = policies.split(",") if policies else 
 """What quota types to update, if not specified all quotas will be calculated, if empty no quotas will be updated."""
 
 
-CRONJOB_DISK_QUOTA_UPDATE_POLICY = strtobool(
-    os.getenv("REANA_CRONJOB_DISK_QUOTA_UPDATE_POLICY", "false")
+PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY = strtobool(
+    os.getenv("REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", "false")
 )
-"""Whether to run the cronjob disk quota updater."""
+"""Whether to run the periodic (cronjob) resource quota updater."""
