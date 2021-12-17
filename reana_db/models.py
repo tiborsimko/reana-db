@@ -51,7 +51,6 @@ from reana_db.config import (
     DEFAULT_QUOTA_LIMITS,
     DEFAULT_QUOTA_RESOURCES,
     WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
-    QuotaResourceType,
 )
 from reana_db.utils import (
     build_workspace_path,
@@ -690,13 +689,13 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
     from .database import Session
 
     def _update_disk_quota(workflow):
-        if QuotaResourceType.disk not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+        if ResourceType.disk.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
             return
         update_users_disk_quota(user=workflow.owner)
         store_workflow_disk_quota(workflow)
 
     def _update_cpu_quota(workflow):
-        if QuotaResourceType.cpu not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
+        if ResourceType.cpu.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
             return
 
         update_workflow_cpu_quota(workflow=workflow)

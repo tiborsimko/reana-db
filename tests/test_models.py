@@ -13,7 +13,6 @@ from uuid import uuid4
 import pytest
 import mock
 
-from reana_db.config import QuotaResourceType
 from reana_db.models import (
     ALLOWED_WORKFLOW_STATUS_TRANSITIONS,
     AuditLogAction,
@@ -211,7 +210,7 @@ def test_access_token(db, session, new_user):
 )
 @mock.patch(
     "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    [QuotaResourceType.cpu.value, QuotaResourceType.disk.value],
+    [ResourceType.cpu.name, ResourceType.disk.name],
 )
 def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
@@ -230,15 +229,13 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
 
 @mock.patch(
     "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    [QuotaResourceType.cpu.value, QuotaResourceType.disk.value],
+    [ResourceType.cpu.name, ResourceType.disk.name],
 )
 @mock.patch(
     "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    [QuotaResourceType.cpu.value, QuotaResourceType.disk.value],
+    [ResourceType.cpu.name, ResourceType.disk.name],
 )
-@mock.patch(
-    "reana_commons.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}]
-)
+@mock.patch("reana_db.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}])
 def test_user_cpu_usage(db, session, new_user, run_workflow):
     """Test aggregated CPU usage per user."""
     time_elapsed_seconds = 0.5
@@ -246,19 +243,19 @@ def test_user_cpu_usage(db, session, new_user, run_workflow):
     for n in range(num_workflows):
         run_workflow(time_elapsed_seconds=time_elapsed_seconds)
 
+    quota_usage = new_user.get_quota_usage()
     assert (
-        new_user.get_quota_usage()["cpu"]["usage"]["raw"]
+        quota_usage["cpu"]["usage"]["raw"]
         >= num_workflows * time_elapsed_seconds * 1000
     )
-    assert new_user.get_quota_usage()["disk"]["usage"]["raw"] == 128
+    assert quota_usage["disk"]["usage"]["raw"] == 128
 
 
 @mock.patch(
     "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", True,
 )
 @pytest.mark.parametrize(
-    "WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    [([QuotaResourceType.cpu.value]), ([]),],
+    "WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY", [([ResourceType.cpu.name]), ([]),],
 )
 def test_all_users_cpu_quota_usage_update(
     db, session, new_user, run_workflow, WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY

@@ -10,7 +10,6 @@
 
 import os
 from distutils.util import strtobool
-from enum import Enum
 
 from reana_commons.config import REANA_INFRASTRUCTURE_COMPONENTS_HOSTNAMES
 
@@ -63,18 +62,6 @@ SQLALCHEMY_POOL_SIZE = int(float(os.getenv("SQLALCHEMY_POOL_SIZE", 5)))
 
 SQLALCHEMY_POOL_TIMEOUT = int(float(os.getenv("SQLALCHEMY_POOL_TIMEOUT", 30)))
 """How many seconds to wait when retrieving a new connection from the pool?"""
-
-
-class QuotaResourceType(str, Enum):
-    """Possible quota policies.
-
-    Example:
-        QuotaPolicy.cpu == "cpu"  # True
-    """
-
-    cpu = "cpu"
-    disk = "disk"
-
 
 DEFAULT_QUOTA_RESOURCES = {
     "cpu": "processing time",

@@ -15,9 +15,8 @@ import click
 from alembic import command
 from alembic import config as alembic_config
 
-from reana_db.config import QuotaResourceType
 from reana_db.database import init_db
-from reana_db.models import Resource, Workflow
+from reana_db.models import Resource, ResourceType, Workflow
 from reana_db.utils import (
     store_workflow_disk_quota,
     update_users_cpu_quota,
@@ -233,14 +232,14 @@ def create_default_resources():
 def resource_usage_update() -> None:
     """Update users disk and CPU quotas."""
 
-    def _resource_usage_update(resource: QuotaResourceType) -> None:
+    def _resource_usage_update(resource: ResourceType) -> None:
         """Update users resource quota usage."""
         try:
-            if resource == QuotaResourceType.disk:
+            if resource == ResourceType.disk:
                 update_users_disk_quota()
                 for workflow in Workflow.query.all():
                     store_workflow_disk_quota(workflow)
-            elif resource == QuotaResourceType.cpu:
+            elif resource == ResourceType.cpu:
                 update_users_cpu_quota()
             click.secho(
                 f"Users {resource.value} quota usage updated successfully.", fg="green"
@@ -252,5 +251,5 @@ def resource_usage_update() -> None:
             )
             sys.exit(1)
 
-    _resource_usage_update(QuotaResourceType.disk)
-    _resource_usage_update(QuotaResourceType.cpu)
+    _resource_usage_update(ResourceType.disk)
+    _resource_usage_update(ResourceType.cpu)
