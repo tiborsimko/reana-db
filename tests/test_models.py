@@ -227,62 +227,91 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     assert cpu_milliseconds >= time_elapsed_seconds * 1000
 
 
-@mock.patch(
-    "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    [ResourceType.cpu.name, ResourceType.disk.name],
-)
-@mock.patch(
-    "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-    [ResourceType.cpu.name, ResourceType.disk.name],
+@pytest.mark.parametrize(
+    "workflow_termination_quota_update_policy",
+    [
+        ([ResourceType.cpu.name, ResourceType.disk.name],),
+        ([ResourceType.cpu.name]),
+        ([ResourceType.disk.name]),
+        ([]),
+    ],
 )
 @mock.patch("reana_db.utils.get_disk_usage", return_value=[{"size": {"raw": "128"}}])
-def test_user_cpu_usage(db, session, new_user, run_workflow):
+def test_workflow_termination_user_quota_usage(
+    db, session, new_user, run_workflow, workflow_termination_quota_update_policy
+):
     """Test aggregated CPU usage per user."""
-    time_elapsed_seconds = 0.5
-    num_workflows = 2
-    for n in range(num_workflows):
-        run_workflow(time_elapsed_seconds=time_elapsed_seconds)
+    with mock.patch(
+        "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        workflow_termination_quota_update_policy,
+    ), mock.patch(
+        "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        workflow_termination_quota_update_policy,
+    ):
 
-    quota_usage = new_user.get_quota_usage()
-    assert (
-        quota_usage["cpu"]["usage"]["raw"]
-        >= num_workflows * time_elapsed_seconds * 1000
-    )
-    assert quota_usage["disk"]["usage"]["raw"] == 128
+        time_elapsed_seconds = 0.5
+        num_workflows = 2
+        for n in range(num_workflows):
+            run_workflow(time_elapsed_seconds=time_elapsed_seconds)
+
+        quota_usage = new_user.get_quota_usage()
+
+        if ResourceType.cpu.name in workflow_termination_quota_update_policy:
+            assert (
+                quota_usage["cpu"]["usage"]["raw"]
+                >= num_workflows * time_elapsed_seconds * 1000
+            )
+        else:
+            quota_usage["cpu"]["usage"]["raw"] == 0
+
+        if ResourceType.disk.name in workflow_termination_quota_update_policy:
+            assert quota_usage["disk"]["usage"]["raw"] == 128
+        else:
+            quota_usage["disk"]["usage"]["raw"] == 0
 
 
-@mock.patch(
-    "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", True,
-)
 @pytest.mark.parametrize(
-    "WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY", [([ResourceType.cpu.name]), ([]),],
+    "workflow_termination_quota_update_policy, periodic_update",
+    [
+        ([], True),
+        ([], False),
+        ([ResourceType.cpu.name], False),
+        ([ResourceType.cpu.name], True),
+    ],
 )
 def test_all_users_cpu_quota_usage_update(
-    db, session, new_user, run_workflow, WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+    db,
+    session,
+    new_user,
+    run_workflow,
+    workflow_termination_quota_update_policy,
+    periodic_update,
 ):
-    """Test CPU periodic update cronjob functionality.
-
-    Multiple scenarios are tested:
-    - CPU periodic update enabled + CPU workflow termination update policy enabled
-    - CPU periodic update enabled + CPU workflow termination update policy disabled
-    """
+    """Test CPU periodic update cronjob functionality."""
     with mock.patch(
-        "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
-        WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
+        "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        workflow_termination_quota_update_policy,
+    ), mock.patch(
+        "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", periodic_update,
     ):
         time_elapsed_seconds = 0.5
         num_workflows = 2
         for n in range(num_workflows):
             run_workflow(time_elapsed_seconds=time_elapsed_seconds)
 
-        if not WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
-            # verify that workflow termination policy logic is not executed
-            assert new_user.get_quota_usage()["cpu"]["usage"]["raw"] == 0
+        quota_cpu_usage = new_user.get_quota_usage()["cpu"]["usage"]["raw"]
+        if workflow_termination_quota_update_policy:
+            assert quota_cpu_usage >= num_workflows * time_elapsed_seconds * 1000
+        else:
+            assert quota_cpu_usage == 0
+
         update_users_cpu_quota()
-        assert (
-            new_user.get_quota_usage()["cpu"]["usage"]["raw"]
-            >= num_workflows * time_elapsed_seconds * 1000
-        )
+
+        quota_cpu_usage = new_user.get_quota_usage()["cpu"]["usage"]["raw"]
+        if workflow_termination_quota_update_policy or periodic_update:
+            assert quota_cpu_usage >= num_workflows * time_elapsed_seconds * 1000
+        else:
+            assert quota_cpu_usage == 0
 
 
 @pytest.mark.parametrize(

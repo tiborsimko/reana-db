@@ -686,7 +686,6 @@ class Workflow(Base, Timestamp, QuotaBase):
 @event.listens_for(Workflow.status, "set")
 def workflow_status_change_listener(workflow, new_status, old_status, initiator):
     """Workflow status change listener."""
-    from .database import Session
 
     def _update_disk_quota(workflow):
         if ResourceType.disk.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:

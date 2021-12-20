@@ -242,11 +242,11 @@ def resource_usage_update() -> None:
             elif resource == ResourceType.cpu:
                 update_users_cpu_quota()
             click.secho(
-                f"Users {resource.value} quota usage updated successfully.", fg="green"
+                f"Users {resource.name} quota usage updated successfully.", fg="green"
             )
         except Exception as e:
             click.secho(
-                f"[ERROR]: An error occurred when updating users {resource} quota usage: {repr(e)}",
+                f"[ERROR]: An error occurred when updating users {resource.name} quota usage: {repr(e)}",
                 fg="red",
             )
             sys.exit(1)
