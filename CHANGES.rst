@@ -1,6 +1,14 @@
 Changes
 =======
 
+Version 0.8.1 (2022-02-01)
+---------------------------
+
+- Adds an option to periodically calculate CPU quota usage.
+- Changes CLI quota command from ``disk-usage-update`` to ``resource-usage-update`` since it can also perform CPU quota calculation.
+- Fixes quota update functions to handle exceptional situation as continuable errors.
+- Removes extra ``QuotaResourceType`` enum in favor of ``ResourceType.name``.
+
 Version 0.8.0 (2021-11-22)
 ---------------------------
 
