@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -690,14 +690,21 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
     def _update_disk_quota(workflow):
         if ResourceType.disk.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
             return
-        update_users_disk_quota(user=workflow.owner)
-        store_workflow_disk_quota(workflow)
+
+        try:
+            update_users_disk_quota(user=workflow.owner)
+            store_workflow_disk_quota(workflow)
+        except Exception as e:
+            logging.error(f"Failed to update disk quota: \n{e}\nContinuing...")
 
     def _update_cpu_quota(workflow):
         if ResourceType.cpu.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY:
             return
 
-        update_workflow_cpu_quota(workflow=workflow)
+        try:
+            update_workflow_cpu_quota(workflow=workflow)
+        except Exception as e:
+            logging.error(f"Failed to update cpu quota: \n{e}\nContinuing...")
 
     workflow.update_workflow_timestamp(new_status)
     if new_status in [
