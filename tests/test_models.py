@@ -93,7 +93,7 @@ def test_workflow_run_number_assignment(db, session, new_user):
         (RunStatus.created, RunStatus.stopped, False),
         (RunStatus.created, RunStatus.running, False),
         (RunStatus.created, RunStatus.pending, False),
-        (RunStatus.queued, RunStatus.failed, False),
+        (RunStatus.queued, RunStatus.failed, True),
         (RunStatus.queued, RunStatus.finished, False),
         (RunStatus.queued, RunStatus.stopped, False),
         (RunStatus.queued, RunStatus.running, False),

@@ -356,6 +356,7 @@ ALLOWED_WORKFLOW_STATUS_TRANSITIONS = [
     # Queued
     (RunStatus.queued, RunStatus.deleted),
     (RunStatus.queued, RunStatus.pending),
+    (RunStatus.queued, RunStatus.failed),
     # Pending
     (RunStatus.pending, RunStatus.running),
     (RunStatus.pending, RunStatus.deleted),

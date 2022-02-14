@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 0.8.2 (UNRELEASED)
+---------------------------
+
+- Adds transition for workflow from queued to failed status.
+
 Version 0.8.1 (2022-02-01)
 ---------------------------
 
