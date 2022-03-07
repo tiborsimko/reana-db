@@ -465,6 +465,7 @@ class Workflow(Base, Timestamp, QuotaBase):
     git_ref = Column(String(40))
     git_repo = Column(String(255))
     git_provider = Column(String(255))
+    launcher_url = Column(String)
     owner = relationship("User", backref="workflow")
 
     sessions = relationship(
