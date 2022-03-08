@@ -501,6 +501,7 @@ class Workflow(Base, Timestamp, QuotaBase):
         workspace_path=None,
         restart=False,
         run_number=None,
+        launcher_url=None,
     ):
         """Initialize workflow model."""
         self.id_ = id_
@@ -521,6 +522,7 @@ class Workflow(Base, Timestamp, QuotaBase):
         self.workspace_path = workspace_path or build_workspace_path(
             self.owner_id, self.id_
         )
+        self.launcher_url = launcher_url
 
     def __repr__(self):
         """Workflow string representation."""
