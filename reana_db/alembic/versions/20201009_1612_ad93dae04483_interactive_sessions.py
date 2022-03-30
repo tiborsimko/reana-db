@@ -44,7 +44,10 @@ def upgrade():
         sa.Column(
             "type_", sa.Enum("jupyter", name="interactivesessiontype"), nullable=False
         ),
-        sa.ForeignKeyConstraint(["owner_id"], ["__reana.user_.id_"],),
+        sa.ForeignKeyConstraint(
+            ["owner_id"],
+            ["__reana.user_.id_"],
+        ),
         sa.PrimaryKeyConstraint("id_"),
         sa.UniqueConstraint("id_"),
         sa.UniqueConstraint("name", "path", name="_interactive_session_uc"),
@@ -59,8 +62,14 @@ def upgrade():
             "resource_id", sqlalchemy_utils.types.uuid.UUIDType(), nullable=False
         ),
         sa.Column("quota_used", sa.BigInteger(), nullable=True),
-        sa.ForeignKeyConstraint(["resource_id"], ["__reana.resource.id_"],),
-        sa.ForeignKeyConstraint(["session_id"], ["__reana.interactive_session.id_"],),
+        sa.ForeignKeyConstraint(
+            ["resource_id"],
+            ["__reana.resource.id_"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["session_id"],
+            ["__reana.interactive_session.id_"],
+        ),
         sa.PrimaryKeyConstraint("session_id", "resource_id"),
         schema="__reana",
     )
@@ -68,8 +77,14 @@ def upgrade():
         "workflow_session",
         sa.Column("workflow_id", sqlalchemy_utils.types.uuid.UUIDType(), nullable=True),
         sa.Column("session_id", sqlalchemy_utils.types.uuid.UUIDType(), nullable=False),
-        sa.ForeignKeyConstraint(["session_id"], ["__reana.interactive_session.id_"],),
-        sa.ForeignKeyConstraint(["workflow_id"], ["__reana.workflow.id_"],),
+        sa.ForeignKeyConstraint(
+            ["session_id"],
+            ["__reana.interactive_session.id_"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["workflow_id"],
+            ["__reana.workflow.id_"],
+        ),
         sa.PrimaryKeyConstraint("session_id"),
         schema="__reana",
     )

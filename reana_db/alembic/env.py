@@ -84,7 +84,9 @@ def run_migrations_online():
         "sqlalchemy.url": SQLALCHEMY_DATABASE_URI,
     }
     connectable = engine_from_config(
-        conf, prefix="sqlalchemy.", poolclass=pool.NullPool,
+        conf,
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:

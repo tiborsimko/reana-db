@@ -177,7 +177,10 @@ def downgrade(config, revision, sql, tag):
 
 @alembic_group.command()
 @click.option(
-    "-v", "--verbose", is_flag=True, help=("Use more verbose output."),
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help=("Use more verbose output."),
 )
 @click.pass_obj
 def current(config, verbose):
@@ -193,10 +196,16 @@ def current(config, verbose):
     help=("Specify a revision range; format is [start]:[end]."),
 )
 @click.option(
-    "-v", "--verbose", is_flag=True, help=("Use more verbose output."),
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help=("Use more verbose output."),
 )
 @click.option(
-    "-i", "--indicate-current", is_flag=True, help=("Indicate the current revision."),
+    "-i",
+    "--indicate-current",
+    is_flag=True,
+    help=("Indicate the current revision."),
 )
 @click.pass_obj
 def history(config, rev_range, verbose, indicate_current):

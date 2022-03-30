@@ -47,8 +47,14 @@ def upgrade():
         ),
         sa.Column("quota_limit", sa.BigInteger(), nullable=True),
         sa.Column("quota_used", sa.BigInteger(), nullable=True),
-        sa.ForeignKeyConstraint(["resource_id"], ["__reana.resource.id_"],),
-        sa.ForeignKeyConstraint(["user_id"], ["__reana.user_.id_"],),
+        sa.ForeignKeyConstraint(
+            ["resource_id"],
+            ["__reana.resource.id_"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["__reana.user_.id_"],
+        ),
         sa.PrimaryKeyConstraint("user_id", "resource_id"),
         schema="__reana",
     )
@@ -63,8 +69,14 @@ def upgrade():
             "resource_id", sqlalchemy_utils.types.uuid.UUIDType(), nullable=False
         ),
         sa.Column("quota_used", sa.BigInteger(), nullable=True),
-        sa.ForeignKeyConstraint(["resource_id"], ["__reana.resource.id_"],),
-        sa.ForeignKeyConstraint(["workflow_id"], ["__reana.workflow.id_"],),
+        sa.ForeignKeyConstraint(
+            ["resource_id"],
+            ["__reana.resource.id_"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["workflow_id"],
+            ["__reana.workflow.id_"],
+        ),
         sa.PrimaryKeyConstraint("workflow_id", "resource_id"),
         schema="__reana",
     )

@@ -292,7 +292,8 @@ def test_all_users_cpu_quota_usage_update(
         "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
         workflow_termination_quota_update_policy,
     ), mock.patch(
-        "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", periodic_update,
+        "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY",
+        periodic_update,
     ):
         time_elapsed_seconds = 0.5
         num_workflows = 2
@@ -332,10 +333,10 @@ def test_all_users_cpu_quota_usage_update(
         (ResourceUnit.bytes_, 0, "0 Bytes"),
         (ResourceUnit.bytes_, 1024 * 35, "35 KiB"),
         (ResourceUnit.bytes_, 1024 * 200 + 512, "200.5 KiB"),
-        (ResourceUnit.bytes_, 1024 ** 2, "1 MiB"),
-        (ResourceUnit.bytes_, 1024 ** 2 + 1024 * 768, "1.75 MiB"),
-        (ResourceUnit.bytes_, 1024 ** 3 * 5 + 1024 ** 2 * 100, "5.1 GiB"),
-        (ResourceUnit.bytes_, 1024 ** 4 + 1024 ** 3 * 256, "1.25 TiB"),
+        (ResourceUnit.bytes_, 1024**2, "1 MiB"),
+        (ResourceUnit.bytes_, 1024**2 + 1024 * 768, "1.75 MiB"),
+        (ResourceUnit.bytes_, 1024**3 * 5 + 1024**2 * 100, "5.1 GiB"),
+        (ResourceUnit.bytes_, 1024**4 + 1024**3 * 256, "1.25 TiB"),
     ],
 )
 def test_human_readable_unit_values(unit, value, human_readable_string):
@@ -392,7 +393,10 @@ def test_should_cleanup_job(
     ],
 )
 def test_get_workflow_overload_priority(
-    run_workflow, running_workflows, REANA_MAX_CONCURRENT_BATCH_WORKFLOWS, priority,
+    run_workflow,
+    running_workflows,
+    REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,
+    priority,
 ):
     """Test logic to determine workflow overload priority factor based on running workflows."""
     with mock.patch(

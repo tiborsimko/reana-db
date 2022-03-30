@@ -19,11 +19,15 @@ readme = open("README.rst").read()
 history = open("CHANGES.rst").read()
 
 tests_require = [
-    "pytest-reana>=0.9.0a2,<0.10.0",
+    "pytest-reana>=0.9.0a3,<0.10.0",
 ]
 
 extras_require = {
-    "docs": ["Sphinx>=1.4.4", "sphinx-rtd-theme>=0.1.9", "sphinx-click>=1.0.4",],
+    "docs": [
+        "Sphinx>=1.4.4",
+        "sphinx-rtd-theme>=0.1.9",
+        "sphinx-click>=1.0.4",
+    ],
     "tests": tests_require,
 }
 
@@ -65,7 +69,9 @@ setup(
     author_email="info@reana.io",
     url="https://github.com/reanahub/reana-db",
     packages=packages,
-    entry_points={"console_scripts": ["reana-db=reana_db.cli:cli"],},
+    entry_points={
+        "console_scripts": ["reana-db=reana_db.cli:cli"],
+    },
     zip_safe=False,
     include_package_data=True,
     python_requires=">=3.6",
