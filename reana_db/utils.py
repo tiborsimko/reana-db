@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -217,7 +217,20 @@ def get_default_quota_resource(resource_type):
     return Resource.query.filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type]).one()
 
 
-def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> None:
+def should_skip_quota_update(resource_type) -> bool:
+    """Check if quota updates should be skipped based on the update policy.
+
+    :param resource_type: Resource type of the quota that needs to be updated.
+    """
+    return (
+        resource_type.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
+        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
+    )
+
+
+def update_users_disk_quota(
+    user=None, bytes_to_sum: Optional[int] = None, override_policy_checks: bool = False
+) -> None:
     """Update users disk quota usage.
 
     :param user: User whose disk quota will be updated. If None, applies to all users.
@@ -227,14 +240,13 @@ def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> No
     :type user: reana_db.models.User
     :type bytes_to_sum: int
 
+    :param override_policy_checks: Whether to update the disk quota without checking the
+        update policy.
     """
     from reana_db.config import DEFAULT_QUOTA_RESOURCES
     from reana_db.models import Resource, ResourceType, User, UserResource
 
-    if (
-        ResourceType.disk.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
-    ):
+    if not override_policy_checks and should_skip_quota_update(ResourceType.disk):
         return
 
     users = [user] if user else User.query.all()
@@ -250,7 +262,7 @@ def update_users_disk_quota(user=None, bytes_to_sum: Optional[int] = None) -> No
             user_resource_quota = UserResource.query.filter_by(
                 user_id=u.id_, resource_id=disk_resource.id_
             ).first()
-            if bytes_to_sum:
+            if bytes_to_sum is not None:
                 user_resource_quota.quota_used += bytes_to_sum
             else:
                 workspace_path = u.get_user_workspace()
@@ -318,10 +330,7 @@ def update_users_cpu_quota(user=None) -> None:
         UserTokenStatus,
     )
 
-    if (
-        ResourceType.cpu.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
-    ):
+    if should_skip_quota_update(ResourceType.cpu):
         return
 
     if user:
@@ -359,7 +368,9 @@ def get_disk_usage_or_zero(workspace_path) -> int:
         return 0
 
 
-def store_workflow_disk_quota(workflow, bytes_to_sum: Optional[int] = None):
+def store_workflow_disk_quota(
+    workflow, bytes_to_sum: Optional[int] = None, override_policy_checks: bool = False
+):
     """
     Update or create disk workflow resource.
 
@@ -369,14 +380,14 @@ def store_workflow_disk_quota(workflow, bytes_to_sum: Optional[int] = None):
 
     :type workflow: reana_db.models.Workflow
     :type bytes_to_sum: int
+
+    :param override_policy_checks: Whether to update the disk quota without checking the
+        update policy.
     """
     from reana_db.database import Session
     from reana_db.models import ResourceType, WorkflowResource
 
-    if (
-        ResourceType.disk.name not in WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY
-        and not PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY
-    ):
+    if not override_policy_checks and should_skip_quota_update(ResourceType.disk):
         return
 
     disk_resource = get_default_quota_resource(ResourceType.disk.name)
@@ -387,7 +398,7 @@ def store_workflow_disk_quota(workflow, bytes_to_sum: Optional[int] = None):
     )
 
     if workflow_resource:
-        if bytes_to_sum:
+        if bytes_to_sum is not None:
             workflow_resource.quota_used += bytes_to_sum
         else:
             workflow_resource.quota_used = get_disk_usage_or_zero(
