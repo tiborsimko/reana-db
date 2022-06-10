@@ -5,6 +5,7 @@ Version 0.9.0 (UNRELEASED)
 ---------------------------
 
 - Adds new ``launcher_url`` column to the ``Workflow`` table to store the remote origin of workflows submitted via Launch on REANA.
+- Changes percentage ranges for calculating the quota health status.
 
 Version 0.8.2 (2022-02-23)
 ---------------------------

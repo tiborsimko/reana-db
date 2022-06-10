@@ -79,8 +79,8 @@ class QuotaBase:
             health = QuotaHealth.healthy
             if limit:
                 percentage = usage / limit * 100
-                if percentage >= 60:
-                    if percentage >= 85:
+                if percentage >= 80:
+                    if percentage >= 100:
                         health = QuotaHealth.critical
                     else:
                         health = QuotaHealth.warning
