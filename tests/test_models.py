@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -24,8 +24,14 @@ from reana_db.models import (
     Workflow,
     WorkflowResource,
     RunStatus,
+    WorkspaceRetentionRule,
+    WorkspaceRetentionRuleStatus,
 )
-from reana_db.utils import get_default_quota_resource, update_users_cpu_quota
+from reana_db.utils import (
+    get_default_quota_resource,
+    update_users_cpu_quota,
+    update_workspace_retention_rules,
+)
 
 
 def test_workflow_run_number_assignment(db, session, new_user):
@@ -80,6 +86,42 @@ def test_workflow_run_number_assignment(db, session, new_user):
     session.add(first_workflow_second_restart)
     session.commit()
     assert first_workflow_second_restart.run_number == 1.2
+
+
+def test_workflow_retention_rules(db, session, new_user):
+    """Test workflow retention rules."""
+    retention_rules = [{"workspace_files": "**/*.root", "retention_days": 1}]
+    workflow = Workflow(
+        id_=str(uuid4()),
+        name="workflow",
+        owner_id=new_user.id_,
+        reana_specification=[],
+        type_="serial",
+        logs="",
+    )
+    session.add(workflow)
+    session.commit()
+
+    workflow.set_workspace_retention_rules(retention_rules)
+    assert (
+        workflow.retention_rules.first().status == WorkspaceRetentionRuleStatus.created
+    )
+    workflow.activate_workspace_retention_rules()
+    assert (
+        workflow.retention_rules.first().status == WorkspaceRetentionRuleStatus.active
+    )
+    workflow.inactivate_workspace_retention_rules()
+    assert (
+        workflow.retention_rules.first().status == WorkspaceRetentionRuleStatus.inactive
+    )
+    rules = workflow.retention_rules.all()
+    with pytest.raises(Exception) as e:
+        update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.created)
+    assert "Cannot transition workspace retention rule" in e.value.args[0]
+
+    with pytest.raises(Exception) as e:
+        workflow.set_workspace_retention_rules(retention_rules)
+    assert "duplicate key value violates unique constraint" in e.value.args[0]
 
 
 @mock.patch(

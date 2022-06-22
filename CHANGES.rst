@@ -5,6 +5,7 @@ Version 0.9.0 (UNRELEASED)
 ---------------------------
 
 - Adds new ``launcher_url`` column to the ``Workflow`` table to store the remote origin of workflows submitted via Launch on REANA.
+- Adds new ``WorkspaceRetentionRule`` table to store workspace file retention rules.
 - Adds a limit to the number of times a workflow can be restarted.
 - Changes percentage ranges for calculating the quota health status.
 

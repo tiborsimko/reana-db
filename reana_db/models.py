@@ -16,11 +16,13 @@ import logging
 import uuid
 from datetime import datetime
 from functools import reduce
+from typing import Dict, List
 
 from reana_commons.config import (
     MQ_MAX_PRIORITY,
     REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,
     REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
+    WORKFLOW_TIME_FORMAT,
 )
 from reana_commons.errors import REANAValidationError
 from reana_commons.utils import get_disk_usage
@@ -32,6 +34,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -59,6 +62,7 @@ from reana_db.utils import (
     store_workflow_disk_quota,
     update_users_disk_quota,
     update_workflow_cpu_quota,
+    update_workspace_retention_rules,
 )
 
 
@@ -469,13 +473,15 @@ class Workflow(Base, Timestamp, QuotaBase):
     git_provider = Column(String(255))
     launcher_url = Column(String)
     owner = relationship("User", backref="workflow")
-
     sessions = relationship(
         "InteractiveSession",
         secondary="__reana.workflow_session",
         lazy="dynamic",
         backref="workflow",
         cascade="all, delete",
+    )
+    retention_rules = relationship(
+        "WorkspaceRetentionRule", backref="workflow", lazy="dynamic"
     )
 
     __table_args__ = (
@@ -627,6 +633,41 @@ class Workflow(Base, Timestamp, QuotaBase):
 
         return [{"name": "", "size": disk_usage}]
 
+    def set_workspace_retention_rules(self, rules: List[Dict[str, str]]):
+        """Set workspace retention rules for the workflow."""
+        from .database import Session
+
+        for rule in rules:
+            wr = WorkspaceRetentionRule(
+                workflow_id=self.id_,
+                workspace_files=rule["workspace_files"],
+                retention_days=rule["retention_days"],
+            )
+            Session.add(wr)
+        Session.commit()
+
+    def activate_workspace_retention_rules(self):
+        """Activate workspace retention rules for the workflow."""
+        rules = WorkspaceRetentionRule.query.filter_by(
+            workflow_id=self.id_, status=WorkspaceRetentionRuleStatus.created
+        )
+        update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.active)
+
+    def inactivate_workspace_retention_rules(self):
+        """Inactivate workspace retention rules for all the parent workflows."""
+        run_number = math.floor(self.run_number)
+        rules = WorkspaceRetentionRule.query.join(Workflow).filter(
+            Workflow.name == self.name,
+            Workflow.owner_id == self.owner_id,
+            Workflow.run_number >= run_number,
+            Workflow.run_number < run_number + 1,
+            or_(
+                WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.created,
+                WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.active,
+            ),
+        )
+        update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.inactive)
+
     def get_priority(self, cluster_memory):
         """Workflow priority when scheduling it.
 
@@ -720,6 +761,8 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
             logging.error(f"Failed to update cpu quota: \n{e}\nContinuing...")
 
     workflow.update_workflow_timestamp(new_status)
+    if new_status in [RunStatus.finished, RunStatus.failed]:
+        workflow.activate_workspace_retention_rules()
     if new_status in [
         RunStatus.finished,
         RunStatus.failed,
@@ -810,6 +853,111 @@ class AuditLog(Base, Timestamp):
     def __repr__(self):
         """Audit log string representation."""
         return "<AuditLog {} {}>".format(self.id_, self.action)
+
+
+class WorkspaceRetentionRuleStatus(enum.Enum):
+    """Enumeration of workspace retention rule status."""
+
+    created = 0
+    active = 1
+    inactive = 2
+    applied = 3
+
+
+ALLOWED_WORKSPACE_RETENTION_RULE_STATUS_TRANSITIONS = [
+    # Created
+    (WorkspaceRetentionRuleStatus.created, WorkspaceRetentionRuleStatus.active),
+    (WorkspaceRetentionRuleStatus.created, WorkspaceRetentionRuleStatus.inactive),
+    # Active
+    (WorkspaceRetentionRuleStatus.active, WorkspaceRetentionRuleStatus.inactive),
+    (WorkspaceRetentionRuleStatus.active, WorkspaceRetentionRuleStatus.applied),
+    # Inactive
+    (WorkspaceRetentionRuleStatus.inactive, WorkspaceRetentionRuleStatus.active),
+    # Applied
+    (WorkspaceRetentionRuleStatus.applied, WorkspaceRetentionRuleStatus.applied),
+]
+
+
+class WorkspaceRetentionAuditLog(Base):
+    """Workspace retention audit log table."""
+
+    __tablename__ = "workspace_retention_audit_log"
+    __table_args__ = {"schema": "__reana"}
+
+    workspace_retention_rule_id = Column(
+        UUIDType,
+        ForeignKey("__reana.workspace_retention_rule.id_"),
+        primary_key=True,
+        nullable=False,
+    )
+    timestamp = Column(DateTime, server_default=func.now(), primary_key=True)
+    action = Column(
+        Enum(WorkspaceRetentionRuleStatus), primary_key=True, nullable=False
+    )
+
+    def __repr__(self):
+        """Workspace Retention audit log string representation."""
+        return f"<WorkspaceRetentionAuditLog {self.workspace_retention_rule_id} {self.action}>"
+
+
+class WorkspaceRetentionRule(Base):
+    """Workspace retention rule table."""
+
+    __tablename__ = "workspace_retention_rule"
+    __table_args__ = {"schema": "__reana"}
+
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
+    workflow_id = Column(UUIDType, ForeignKey("__reana.workflow.id_"), nullable=False)
+    workspace_files = Column(String(length=255), nullable=False)
+    retention_days = Column(Integer, nullable=False)
+    apply_on = Column(DateTime, nullable=True)
+    status = Column(
+        Enum(WorkspaceRetentionRuleStatus),
+        default=WorkspaceRetentionRuleStatus.created,
+        nullable=False,
+    )
+    audit_logs = relationship(
+        "WorkspaceRetentionAuditLog", backref="workspace_retention_rule", lazy="dynamic"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workflow_id", "workspace_files", name="_workspace_retention_rule_uc"
+        ),
+        {"schema": "__reana"},
+    )
+
+    def can_transition_to(self, next_status):
+        """Whether the provided retention rule can transition to the next status."""
+        current_transition = (self.status, next_status)
+        return current_transition in ALLOWED_WORKSPACE_RETENTION_RULE_STATUS_TRANSITIONS
+
+    def serialize(self):
+        """Serialize workspace retention rule object data."""
+        return {
+            "id": str(self.id_),
+            "workspace_files": self.workspace_files,
+            "retention_days": self.retention_days,
+            "apply_on": (
+                self.apply_on.strftime(WORKFLOW_TIME_FORMAT) if self.apply_on else None
+            ),
+            "status": self.status.name,
+        }
+
+    def __repr__(self):
+        """Workspace Retention string representation."""
+        return f"<WorkspaceRetentionRule {self.workflow_id} {self.workspace_files} {self.retention_days} {self.status}>"
+
+
+@event.listens_for(WorkspaceRetentionRule, "after_insert")
+@event.listens_for(WorkspaceRetentionRule, "after_update")
+def workspace_retention_change_listener(mapper, connection, workspace_retention_rule):
+    """Workspace retention change listener."""
+    connection.execute(
+        WorkspaceRetentionAuditLog.__table__.insert(),
+        workspace_retention_rule_id=workspace_retention_rule.id_,
+        action=workspace_retention_rule.status,
+    )
 
 
 class ResourceType(enum.Enum):

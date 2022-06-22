@@ -8,6 +8,7 @@
 """REANA-DB utils."""
 
 import os
+from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -349,6 +350,37 @@ def update_users_cpu_quota(user=None) -> None:
         ).first()
         user_resource_quota.quota_used = cpu_milliseconds
         Session.commit()
+
+
+def update_workspace_retention_rules(rules, status) -> None:
+    """Update workspace retention rules status.
+
+    :param rules: Workspace retention rules that need to be updated
+    :param status: Status accoring which retention rules need to be updated
+
+    :type rules: reana_db.models.WorkspaceRetentionRule
+    :type status: reana_db.models.WorkspaceRetentionRuleStatus
+    """
+    from reana_db.database import Session
+    from reana_db.models import WorkspaceRetentionRuleStatus
+
+    for rule in rules:
+        if rule.status == status:
+            continue
+        if not rule.can_transition_to(status):
+            raise Exception(
+                f"Cannot transition workspace retention rule {rule.id_} "
+                f"from status {rule.status} to {status}."
+            )
+        if status == WorkspaceRetentionRuleStatus.inactive:
+            rule.apply_on = None
+        if status == WorkspaceRetentionRuleStatus.active:
+            rule.apply_on = datetime.today().replace(
+                hour=23, minute=59, second=59
+            ) + timedelta(days=rule.retention_days)
+        rule.status = status
+        Session.add(rule)
+    Session.commit()
 
 
 def get_disk_usage_or_zero(workspace_path) -> int:
