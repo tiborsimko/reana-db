@@ -22,6 +22,7 @@ from reana_commons.config import (
     REANA_MAX_CONCURRENT_BATCH_WORKFLOWS,
     REANA_RUNTIME_KUBERNETES_KEEP_ALIVE_JOBS_WITH_STATUSES,
 )
+from reana_commons.errors import REANAValidationError
 from reana_commons.utils import get_disk_usage
 from sqlalchemy import (
     BigInteger,
@@ -50,6 +51,7 @@ from reana_db.config import (
     DB_SECRET_KEY,
     DEFAULT_QUOTA_LIMITS,
     DEFAULT_QUOTA_RESOURCES,
+    LIMIT_RESTARTS,
     WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
 )
 from reana_db.utils import (
@@ -563,6 +565,13 @@ class Workflow(Base, Timestamp, QuotaBase):
                 .first()
             )
         if last_workflow and self.restart:
+            # FIXME: remove the limit of nine restarts when we fix the way in which
+            # we save `run_number` in the DB
+            num_restarts = round(last_workflow.run_number * 10) % 10
+            if num_restarts == LIMIT_RESTARTS:
+                raise REANAValidationError(
+                    f"Cannot restart a workflow more than {LIMIT_RESTARTS} times"
+                )
             return round(last_workflow.run_number + 0.1, 1)
         else:
             if not last_workflow:
