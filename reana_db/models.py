@@ -609,29 +609,14 @@ class Workflow(Base, Timestamp, QuotaBase):
         """Retrieve disk usage information of a workspace."""
         from functools import partial
 
-        if not summarize:
-            # size break down per directory so we can't query DB (`r-client du`)
-            return get_disk_usage(
-                self.workspace_path,
-                summarize,
-                search,
-                to_human_readable_units=partial(
-                    ResourceUnit.human_readable_unit, ResourceUnit.bytes_
-                ),
-            )
-
-        disk_usage = self.get_quota_usage().get("disk", {}).get("usage", {})
-        if not disk_usage:
-            # recalculate disk workflow resource
-            workflow_resource = store_workflow_disk_quota(self)
-            disk_usage = dict(
-                raw=workflow_resource.quota_used,
-                to_human_readable_units=ResourceUnit.human_readable_unit(
-                    ResourceUnit.bytes_, workflow_resource.quota_used
-                ),
-            )
-
-        return [{"name": "", "size": disk_usage}]
+        return get_disk_usage(
+            self.workspace_path,
+            summarize,
+            search,
+            to_human_readable_units=partial(
+                ResourceUnit.human_readable_unit, ResourceUnit.bytes_
+            ),
+        )
 
     def set_workspace_retention_rules(self, rules: List[Dict[str, str]]):
         """Set workspace retention rules for the workflow."""

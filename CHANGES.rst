@@ -8,6 +8,7 @@ Version 0.9.0 (UNRELEASED)
 - Adds new ``WorkspaceRetentionRule`` table to store workspace file retention rules.
 - Adds a limit to the number of times a workflow can be restarted.
 - Changes percentage ranges for calculating the quota health status.
+- Changes ``Workflow.get_workspace_disk_usage`` to calculate disk usage and not use the usage values from database.
 
 Version 0.8.2 (2022-02-23)
 ---------------------------
