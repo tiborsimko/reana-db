@@ -9,6 +9,7 @@ Version 0.9.0 (UNRELEASED)
 - Adds a limit to the number of times a workflow can be restarted.
 - Changes percentage ranges for calculating the quota health status.
 - Changes ``Workflow.get_workspace_disk_usage`` to calculate disk usage and not use the usage values from database.
+- Changes to PostgreSQL 12.10.
 
 Version 0.8.2 (2022-02-23)
 ---------------------------
