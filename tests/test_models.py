@@ -90,30 +90,50 @@ def test_workflow_run_number_assignment(db, session, new_user):
 
 def test_workflow_retention_rules(db, session, new_user):
     """Test workflow retention rules."""
+
+    def add_workflow(name, restart=False):
+        workflow = Workflow(
+            id_=str(uuid4()),
+            name=name,
+            owner_id=new_user.id_,
+            reana_specification=[],
+            type_="serial",
+            logs="",
+            restart=restart,
+        )
+        session.add(workflow)
+        session.commit()
+        return workflow
+
+    def rule_status(workflow):
+        return workflow.retention_rules.first().status
+
     retention_rules = [{"workspace_files": "**/*.root", "retention_days": 1}]
-    workflow = Workflow(
-        id_=str(uuid4()),
-        name="workflow",
-        owner_id=new_user.id_,
-        reana_specification=[],
-        type_="serial",
-        logs="",
-    )
-    session.add(workflow)
-    session.commit()
+    workflow = add_workflow("workflow")
+    workflow_restart = add_workflow("workflow", restart=True)
+    workflow_another_name = add_workflow("another_name")
 
     workflow.set_workspace_retention_rules(retention_rules)
-    assert (
-        workflow.retention_rules.first().status == WorkspaceRetentionRuleStatus.created
-    )
+    workflow_restart.set_workspace_retention_rules(retention_rules)
+    workflow_another_name.set_workspace_retention_rules(retention_rules)
+    assert rule_status(workflow) == WorkspaceRetentionRuleStatus.created
+
     workflow.activate_workspace_retention_rules()
-    assert (
-        workflow.retention_rules.first().status == WorkspaceRetentionRuleStatus.active
-    )
-    workflow.inactivate_workspace_retention_rules()
-    assert (
-        workflow.retention_rules.first().status == WorkspaceRetentionRuleStatus.inactive
-    )
+    assert rule_status(workflow) == WorkspaceRetentionRuleStatus.active
+
+    workflow_restart.inactivate_workspace_retention_rules()
+    assert rule_status(workflow) == WorkspaceRetentionRuleStatus.inactive
+    assert rule_status(workflow_restart) == WorkspaceRetentionRuleStatus.inactive
+    assert rule_status(workflow_another_name) == WorkspaceRetentionRuleStatus.created
+
+    r = workflow_restart.retention_rules.first()
+    r.status = WorkspaceRetentionRuleStatus.pending
+    session.add(r)
+    session.commit()
+    assert workflow.workspace_has_pending_retention_rules()
+    assert workflow_restart.workspace_has_pending_retention_rules()
+    assert not workflow_another_name.workspace_has_pending_retention_rules()
+
     rules = workflow.retention_rules.all()
     with pytest.raises(Exception) as e:
         update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.created)

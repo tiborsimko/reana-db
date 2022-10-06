@@ -638,20 +638,46 @@ class Workflow(Base, Timestamp, QuotaBase):
         )
         update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.active)
 
-    def inactivate_workspace_retention_rules(self):
-        """Inactivate workspace retention rules for all the parent workflows."""
-        run_number = math.floor(self.run_number)
-        rules = WorkspaceRetentionRule.query.join(Workflow).filter(
+    def get_all_restarts(self):
+        """Get all the restarts of this workflow, including the original workflow.
+
+        Returns all the restarts of this workflow, that is all the workflows that have
+        the same name and the same run number (up to the dot). This includes the
+        original workflow, as well as all the following restarts.
+        """
+        run_number = int(self.run_number)
+        restarts = Workflow.query.filter(
             Workflow.name == self.name,
             Workflow.owner_id == self.owner_id,
             Workflow.run_number >= run_number,
             Workflow.run_number < run_number + 1,
+        )
+        return restarts
+
+    def inactivate_workspace_retention_rules(self):
+        """Inactivate workspace retention rules for all the parent workflows."""
+        rules = WorkspaceRetentionRule.query.join(
+            self.get_all_restarts().subquery()
+        ).filter(
             or_(
                 WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.created,
                 WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.active,
             ),
         )
         update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.inactive)
+
+    def workspace_has_pending_retention_rules(self):
+        """Check whether the workspace has retention rules that are pending.
+
+        All the restarts of the workflow are considered when checking the retention
+        rules, as they all share the same workspace.
+        """
+        pending_rules = WorkspaceRetentionRule.query.join(
+            self.get_all_restarts().subquery()
+        ).filter(
+            WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.pending,
+        )
+        return pending_rules.first() is not None
 
     def get_priority(self, cluster_memory):
         """Workflow priority when scheduling it.
@@ -841,12 +867,20 @@ class AuditLog(Base, Timestamp):
 
 
 class WorkspaceRetentionRuleStatus(enum.Enum):
-    """Enumeration of workspace retention rule status."""
+    """Enumeration of workspace retention rule status.
+
+    - ``created`` : initial status of each rule.
+    - ``active``  : the workflow has finished running and the rule can now be considered.
+    - ``inactive``: the rule will not be considered, even though it wasn't applied.
+    - ``pending`` : the rule is currently being handled by the cronjob.
+    - ``applied`` : the rule was handled by the cronjob and the files were deleted.
+    """
 
     created = 0
     active = 1
     inactive = 2
     applied = 3
+    pending = 4
 
 
 ALLOWED_WORKSPACE_RETENTION_RULE_STATUS_TRANSITIONS = [
@@ -855,9 +889,11 @@ ALLOWED_WORKSPACE_RETENTION_RULE_STATUS_TRANSITIONS = [
     (WorkspaceRetentionRuleStatus.created, WorkspaceRetentionRuleStatus.inactive),
     # Active
     (WorkspaceRetentionRuleStatus.active, WorkspaceRetentionRuleStatus.inactive),
-    (WorkspaceRetentionRuleStatus.active, WorkspaceRetentionRuleStatus.applied),
+    (WorkspaceRetentionRuleStatus.active, WorkspaceRetentionRuleStatus.pending),
     # Inactive
     (WorkspaceRetentionRuleStatus.inactive, WorkspaceRetentionRuleStatus.active),
+    # Pending
+    (WorkspaceRetentionRuleStatus.pending, WorkspaceRetentionRuleStatus.applied),
     # Applied
     (WorkspaceRetentionRuleStatus.applied, WorkspaceRetentionRuleStatus.applied),
 ]

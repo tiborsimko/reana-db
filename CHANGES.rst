@@ -7,6 +7,7 @@ Version 0.9.0 (UNRELEASED)
 - Adds new ``launcher_url`` column to the ``Workflow`` table to store the remote origin of workflows submitted via Launch on REANA.
 - Adds new ``WorkspaceRetentionRule`` table to store workspace file retention rules.
 - Adds a limit to the number of times a workflow can be restarted.
+- Adds new ``pending`` status to ``WorkspaceRetentionRuleStatus``.
 - Changes percentage ranges for calculating the quota health status.
 - Changes ``Workflow.get_workspace_disk_usage`` to calculate disk usage and not use the usage values from database.
 - Changes to PostgreSQL 12.10.
