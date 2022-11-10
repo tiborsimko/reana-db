@@ -64,6 +64,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
         workflow with latest run number of all the workflows with this name
         is returned.
     :type uuid_or_name: String
+    :param user_uuid: UUID of the workflow's owner.
 
     :rtype: reana-db.models.Workflow
     """
@@ -90,7 +91,7 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
     if is_uuid:
         # `uuid_or_name` is an UUIDv4.
         # Search with it since it is expected to be unique.
-        return _get_workflow_by_uuid(uuid_or_name)
+        return _get_workflow_by_uuid(uuid_or_name, user_uuid)
 
     else:
         # `uuid_or_name` is not and UUIDv4. Expect it is a name.
@@ -179,17 +180,20 @@ def _get_workflow_by_name(workflow_name, user_uuid):
     return workflow
 
 
-def _get_workflow_by_uuid(workflow_uuid):
+def _get_workflow_by_uuid(workflow_uuid, user_uuid):
     """Get Workflow with UUIDv4.
 
     :param workflow_uuid: UUIDv4 of a Workflow.
     :type workflow_uuid: String representing a valid UUIDv4.
+    :param user_uuid: UUID of the workflow's owner.
 
     :rtype: reana-db.models.Workflow
     """
     from reana_db.models import Workflow
 
-    workflow = Workflow.query.filter(Workflow.id_ == workflow_uuid).first()
+    workflow = Workflow.query.filter(
+        Workflow.id_ == workflow_uuid, Workflow.owner_id == user_uuid
+    ).first()
     if not workflow:
         raise ValueError(
             "REANA_WORKON is set to {0}, but "

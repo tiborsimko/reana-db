@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2019, 2020, 2021 CERN.
+# Copyright (C) 2019, 2020, 2021, 2022 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -9,10 +9,14 @@
 """REANA-DB utils tests."""
 
 from __future__ import absolute_import, print_function
+from uuid import uuid4
 
 import pytest
 
 from reana_commons.config import SHARED_VOLUME_PATH
+
+from reana_db.models import Workflow
+from reana_db.utils import _get_workflow_with_uuid_or_name
 
 
 @pytest.mark.parametrize(
@@ -40,3 +44,31 @@ def test_build_workspace_path(
         )
         == workspace_path
     )
+
+
+def test_get_workflow_with_uuid_or_name(session, new_user):
+    """Tests for _get_workflow_with_uuid_or_name."""
+    workflow = Workflow(
+        id_=uuid4(),
+        name="workflow",
+        owner_id=new_user.id_,
+        reana_specification=[],
+        type_="serial",
+        logs="",
+    )
+    session.add(workflow)
+    session.commit()
+
+    user_uuid = str(new_user.id_)
+    assert workflow == _get_workflow_with_uuid_or_name(str(workflow.id_), user_uuid)
+    assert workflow == _get_workflow_with_uuid_or_name(workflow.name, user_uuid)
+    assert workflow == _get_workflow_with_uuid_or_name(f"{workflow.name}.1", user_uuid)
+
+    # Check that an exception is raised when passing the wrong owner
+    another_user_uuid = str(uuid4())
+    with pytest.raises(ValueError):
+        _get_workflow_with_uuid_or_name(str(workflow.id_), another_user_uuid)
+    with pytest.raises(ValueError):
+        _get_workflow_with_uuid_or_name(workflow.name, another_user_uuid)
+    with pytest.raises(ValueError):
+        _get_workflow_with_uuid_or_name(f"{workflow.name}.1", another_user_uuid)
