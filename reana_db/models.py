@@ -894,6 +894,7 @@ ALLOWED_WORKSPACE_RETENTION_RULE_STATUS_TRANSITIONS = [
     (WorkspaceRetentionRuleStatus.inactive, WorkspaceRetentionRuleStatus.active),
     # Pending
     (WorkspaceRetentionRuleStatus.pending, WorkspaceRetentionRuleStatus.applied),
+    (WorkspaceRetentionRuleStatus.pending, WorkspaceRetentionRuleStatus.active),
     # Applied
     (WorkspaceRetentionRuleStatus.applied, WorkspaceRetentionRuleStatus.applied),
 ]
