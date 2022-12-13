@@ -1,24 +1,26 @@
 Changes
 =======
 
-Version 0.9.0 (UNRELEASED)
----------------------------
+Version 0.9.0 (2022-12-13)
+--------------------------
 
-- Adds new ``launcher_url`` column to the ``Workflow`` table to store the remote origin of workflows submitted via Launch on REANA.
+- Adds new ``launcher_url`` column to the ``Workflow`` table to store the remote origin of workflows submitted via the Launch-on-REANA functionality.
+- Adds the possibility to force resource quota updates irrespective of globally-configured quota update policy.
 - Adds new ``WorkspaceRetentionRule`` table to store workspace file retention rules.
-- Adds a limit to the number of times a workflow can be restarted.
-- Adds new ``pending`` status to ``WorkspaceRetentionRuleStatus``.
-- Changes percentage ranges for calculating the quota health status.
-- Changes ``Workflow.get_workspace_disk_usage`` to calculate disk usage and not use the usage values from database.
+- Adds new ``WorkspaceRetentionAuditLog`` table to store the audit log of workspace file retention rule updates.
+- Changes percentage ranges used to calculate the health status of user resource quota usage.
 - Changes to PostgreSQL 12.10.
+- Fixes wrong numbering of restarted workflows by limiting the number of times a workflow can be restarted to nine.
+- Fixes ``Workflow.get_workspace_disk_usage`` to always calculate disk usage rather than relying on the quota usage values from the database, since these may not be up-to-date depending on the global quota update policy.
+- Fixes helper function that retrieves workflows by UUID to also additionally check that the provided user is the owner of the workflow.
 
 Version 0.8.2 (2022-02-23)
----------------------------
+--------------------------
 
 - Adds transition for workflow from queued to failed status.
 
 Version 0.8.1 (2022-02-01)
----------------------------
+--------------------------
 
 - Adds an option to periodically calculate CPU quota usage.
 - Changes CLI quota command from ``disk-usage-update`` to ``resource-usage-update`` since it can also perform CPU quota calculation.
@@ -26,7 +28,7 @@ Version 0.8.1 (2022-02-01)
 - Removes extra ``QuotaResourceType`` enum in favor of ``ResourceType.name``.
 
 Version 0.8.0 (2021-11-22)
----------------------------
+--------------------------
 
 - Adds new disk usage retrieval methods using canonical (bytes) and human-readable (KiB) units. (``User``, ``Workflow``)
 - Adds Quota models which calculates CPU and disk usage.
