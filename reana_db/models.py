@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -998,13 +998,14 @@ class ResourceUnit(enum.Enum):
     @staticmethod
     def _human_readable_milliseconds(milliseconds):
         """Convert milliseconds usage to human readable string."""
+        abs_seconds = abs(milliseconds) // 1000
         hours, minutes, seconds = (
-            milliseconds // (1000 * 60 * 60),
-            (milliseconds // (1000 * 60)) % 60,
-            (milliseconds // 1000) % 60,
+            abs_seconds // (60 * 60),
+            (abs_seconds // 60) % 60,
+            abs_seconds % 60,
         )
 
-        human_readable_milliseconds = ""
+        human_readable_milliseconds = "-" if milliseconds < 0 else ""
         for value, unit in [(hours, "h"), (minutes, "m"), (seconds, "s")]:
             if value >= 1:
                 human_readable_milliseconds += "{value}{unit} ".format(
@@ -1021,7 +1022,7 @@ class ResourceUnit(enum.Enum):
         units = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
         digits = 2
         k = 1024
-        unit_index = int(math.floor(math.log(bytes_) / math.log(k)))
+        unit_index = math.floor(math.log(abs(bytes_), k))
 
         converted_value = round(bytes_ / math.pow(k, unit_index), digits)
         return "{converted_value} {converted_unit}".format(

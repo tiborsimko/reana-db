@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021, 2022 CERN.
+# Copyright (C) 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -391,6 +391,8 @@ def test_all_users_cpu_quota_usage_update(
             1000 * 60 * 60 * 2 + 1000 * 60 * 35 + 1000 * 10,
             "2h 35m 10s",
         ),
+        (ResourceUnit.milliseconds, -1000 * 35, "-35s"),
+        (ResourceUnit.milliseconds, -1000 * 60 * 60 * 3 - 1000 * 35, "-3h 35s"),
         # Bytes VS human readable
         (ResourceUnit.bytes_, 0, "0 Bytes"),
         (ResourceUnit.bytes_, 1024 * 35, "35 KiB"),
@@ -399,6 +401,8 @@ def test_all_users_cpu_quota_usage_update(
         (ResourceUnit.bytes_, 1024**2 + 1024 * 768, "1.75 MiB"),
         (ResourceUnit.bytes_, 1024**3 * 5 + 1024**2 * 100, "5.1 GiB"),
         (ResourceUnit.bytes_, 1024**4 + 1024**3 * 256, "1.25 TiB"),
+        (ResourceUnit.bytes_, -1024 * 35, "-35 KiB"),
+        (ResourceUnit.bytes_, -(1024**4) - 1024**3 * 256, "-1.25 TiB"),
     ],
 )
 def test_human_readable_unit_values(unit, value, human_readable_string):
