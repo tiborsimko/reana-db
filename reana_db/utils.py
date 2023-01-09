@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 """REANA-DB utils."""
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional
@@ -268,7 +269,16 @@ def update_users_disk_quota(
                 user_id=u.id_, resource_id=disk_resource.id_
             ).first()
             if bytes_to_sum is not None:
-                user_resource_quota.quota_used += bytes_to_sum
+                updated_quota_usage = user_resource_quota.quota_used + bytes_to_sum
+                if updated_quota_usage < 0:
+                    logging.warning(
+                        f"Disk quota consumption of user {u.id_} would become negative: "
+                        f"{user_resource_quota.quota_used} [original usage] + {bytes_to_sum} [delta] "
+                        f"-> {updated_quota_usage} [new usage]. Setting the new usage to zero."
+                    )
+                    user_resource_quota.quota_used = 0
+                else:
+                    user_resource_quota.quota_used = updated_quota_usage
             else:
                 workspace_path = u.get_user_workspace()
                 disk_usage_bytes = get_disk_usage_or_zero(workspace_path)
@@ -435,7 +445,16 @@ def store_workflow_disk_quota(
 
     if workflow_resource:
         if bytes_to_sum is not None:
-            workflow_resource.quota_used += bytes_to_sum
+            updated_quota_usage = workflow_resource.quota_used + bytes_to_sum
+            if updated_quota_usage < 0:
+                logging.warning(
+                    f"Disk quota consumption of workflow {workflow.id_} would become negative: "
+                    f"{workflow_resource.quota_used} [original usage] + {bytes_to_sum} [delta] "
+                    f"-> {updated_quota_usage} [new usage]. Setting the new usage to zero."
+                )
+                workflow_resource.quota_used = 0
+            else:
+                workflow_resource.quota_used = updated_quota_usage
         else:
             workflow_resource.quota_used = get_disk_usage_or_zero(
                 workflow.workspace_path

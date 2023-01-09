@@ -5,6 +5,7 @@ Version 0.9.1 (UNRELEASED)
 --------------------------
 
 - Fixes conversion of possibly-negative resource usage values to human-readable formats.
+- Fixes disk quota updater to prevent setting negative disk quota usage values.
 
 Version 0.9.0 (2022-12-13)
 --------------------------
