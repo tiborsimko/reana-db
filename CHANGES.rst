@@ -4,6 +4,7 @@ Changes
 Version 0.9.1 (UNRELEASED)
 --------------------------
 
+- Changes to PostgreSQL 12.13.
 - Fixes conversion of possibly-negative resource usage values to human-readable formats.
 - Fixes disk quota updater to prevent setting negative disk quota usage values.
 
