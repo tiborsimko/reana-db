@@ -14,6 +14,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import inspect
+from sqlalchemy.orm import defer
 from reana_commons.utils import get_disk_usage
 from reana_commons.errors import REANAMissingWorkspaceError
 
@@ -343,6 +344,7 @@ def update_users_cpu_quota(user=None) -> None:
         UserResource,
         UserToken,
         UserTokenStatus,
+        Workflow,
     )
 
     if should_skip_quota_update(ResourceType.cpu):
@@ -356,7 +358,12 @@ def update_users_cpu_quota(user=None) -> None:
         )
     for user in users:
         cpu_milliseconds = 0
-        for workflow in user.workflows:
+        # logs and reana_specification are not loaded to avoid consuming
+        # huge amounts of memory
+        for workflow in user.workflows.options(
+            defer(Workflow.logs),
+            defer(Workflow.reana_specification),
+        ):
             cpu_milliseconds += update_workflow_cpu_quota(workflow=workflow)
         cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
         user_resource_quota = UserResource.query.filter_by(

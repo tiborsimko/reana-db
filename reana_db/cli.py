@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2020, 2021 CERN.
+# Copyright (C) 2020, 2021, 2023 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -14,6 +14,7 @@ import sys
 import click
 from alembic import command
 from alembic import config as alembic_config
+from sqlalchemy.orm import defer
 
 from reana_db.database import init_db
 from reana_db.models import Resource, ResourceType, Workflow
@@ -246,7 +247,12 @@ def resource_usage_update() -> None:
         try:
             if resource == ResourceType.disk:
                 update_users_disk_quota()
-                for workflow in Workflow.query.all():
+
+                # logs and reana_specification are not loaded to avoid consuming
+                # huge amounts of memory
+                for workflow in Workflow.query.options(
+                    defer(Workflow.logs), defer(Workflow.reana_specification)
+                ).all():
                     store_workflow_disk_quota(workflow)
             elif resource == ResourceType.cpu:
                 update_users_cpu_quota()
