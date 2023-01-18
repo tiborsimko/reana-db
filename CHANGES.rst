@@ -1,7 +1,7 @@
 Changes
 =======
 
-Version 0.9.1 (UNRELEASED)
+Version 0.9.1 (2023-01-18)
 --------------------------
 
 - Changes to PostgreSQL 12.13.
