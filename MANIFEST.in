@@ -11,6 +11,7 @@ include *.sh
 include *.yaml
 include .flake8
 include pytest.ini
+exclude .readthedocs.yaml
 recursive-include reana_db *.py
 recursive-include reana_db *.mako
 recursive-include reana_db .gitkeep

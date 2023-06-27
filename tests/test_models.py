@@ -310,7 +310,6 @@ def test_workflow_termination_user_quota_usage(
         "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
         workflow_termination_quota_update_policy,
     ):
-
         time_elapsed_seconds = 0.5
         num_workflows = 2
         for n in range(num_workflows):

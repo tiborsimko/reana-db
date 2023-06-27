@@ -32,7 +32,6 @@ from reana_db.utils import _get_workflow_with_uuid_or_name
 def test_build_workspace_path(
     user_id, workflow_id, workspace_root_path, workspace_path
 ):
-
     """Tests for build_workspace_path()."""
     from reana_db.utils import build_workspace_path
 
