@@ -278,7 +278,7 @@ class User(Base, Timestamp, QuotaBase):
                 Workflow.status == RunStatus.running,
             )
         ).count()
-        if running_count > max_concurrent_workflows:
+        if running_count >= max_concurrent_workflows:
             return 0.1
         # we reduce the 10% (* 0.9) to avoid getting a 0 multiplier factor when
         # `running_count == `max_concurrent_workflows`, thus taking into

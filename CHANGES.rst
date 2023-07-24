@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 0.9.2 (UNRELEASED)
+--------------------------
+
+- Fixes the workflow priority calculation to avoid workflows stuck in the ``queued`` status when the number of allowed concurrent workflow is set to zero.
+
 Version 0.9.1 (2023-01-18)
 --------------------------
 
