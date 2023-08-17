@@ -45,8 +45,7 @@ install_requires = [
     "alembic>=1.4.2",
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=1.2.7,<1.4.0",
-    "sqlalchemy-utils>=0.35.0",
-    "cryptography>=2.9.2",  # Required by sqlalchemy_utils.EncryptedType
+    "SQLAlchemy-Utils[encrypted]>=0.36.8",
     "reana-commons>=0.9.1,<0.10.0",
 ]
 
