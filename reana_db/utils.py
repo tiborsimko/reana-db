@@ -206,6 +206,65 @@ def _get_workflow_by_uuid(workflow_uuid, user_uuid):
     return workflow
 
 
+class Timer:
+    """Timer to time events and log periodic progress."""
+
+    def __init__(self, name=None, total=None, periodic_delta=100) -> None:
+        """Initialise new Timer."""
+        self.name = name
+        self.total = total
+        self.periodic_delta = periodic_delta
+        self.count = 0
+        self.start = datetime.now()
+
+    def elapsed(self) -> float:
+        """Elapsed time since the creation of the Timer, in seconds."""
+        diff = datetime.now() - self.start
+        return diff.total_seconds()
+
+    def estimated_total(self) -> float:
+        """Estimated total time, in seconds."""
+        if not self.total or not self.count:
+            return 0
+        return self.elapsed() * self.total / self.count
+
+    def per_event(self) -> float:
+        """Time per event, in seconds."""
+        if self.count == 0:
+            return 0
+        return self.elapsed() / self.count
+
+    def log_progress(self) -> None:
+        """Log progress of events."""
+        progress = ""
+        if self.name:
+            progress = f"{self.name} "
+        progress += f"progress: {self.count}"
+        if self.total:
+            progress += f"/{self.total}"
+        progress += (
+            f"  elapsed: {self.elapsed():.3f}s"
+            f"  est.total: {self.estimated_total():.3f}s"
+            f"  per event: {self.per_event():.3f}s"
+        )
+        logging.info(progress)
+
+    def log_periodic_progress(self) -> None:
+        """Periodically log progress of events.
+
+        Progress is logged periodically after a given amount of events
+        and when all the events are completed.
+        """
+        if self.count != self.total and self.count % self.periodic_delta != 0:
+            return
+        self.log_progress()
+
+    def count_event(self) -> None:
+        """Count a new event."""
+        self.count += 1
+        self.log_periodic_progress()
+
+
 def get_default_quota_resource(resource_type):
     """
     Get default quota resource by given resource type.
@@ -257,7 +316,7 @@ def update_users_disk_quota(
         return
 
     users = [user] if user else User.query.all()
-
+    timer = Timer("User disk quota usage update", total=len(users))
     for u in users:
         disk_resource = Resource.query.filter_by(
             name=DEFAULT_QUOTA_RESOURCES["disk"]
@@ -285,6 +344,7 @@ def update_users_disk_quota(
                 disk_usage_bytes = get_disk_usage_or_zero(workspace_path)
                 user_resource_quota.quota_used = disk_usage_bytes
             Session.commit()
+        timer.count_event()
 
 
 def update_workflow_cpu_quota(workflow) -> int:
@@ -353,9 +413,13 @@ def update_users_cpu_quota(user=None) -> None:
     if user:
         users = [user]
     else:
-        users = User.query.join(UserToken).filter_by(
-            status=UserTokenStatus.active  # skip users with no active token
+        users = (
+            User.query.join(UserToken)
+            .filter_by(status=UserTokenStatus.active)  # skip users with no active token
+            .all()
         )
+    timer_user = Timer("User CPU quota usage update", total=len(users))
+    timer_workflow = Timer("Workflow CPU quota usage update")
     for user in users:
         cpu_milliseconds = 0
         # logs and reana_specification are not loaded to avoid consuming
@@ -365,12 +429,15 @@ def update_users_cpu_quota(user=None) -> None:
             defer(Workflow.reana_specification),
         ):
             cpu_milliseconds += update_workflow_cpu_quota(workflow=workflow)
+            timer_workflow.count_event()
         cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
         user_resource_quota = UserResource.query.filter_by(
             user_id=user.id_, resource_id=cpu_resource.id_
         ).first()
         user_resource_quota.quota_used = cpu_milliseconds
         Session.commit()
+        timer_user.count_event()
+    timer_workflow.log_progress()
 
 
 def update_workspace_retention_rules(rules, status) -> None:
