@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import inspect
+from sqlalchemy import inspect, func
 from sqlalchemy.orm import defer
 from reana_commons.utils import get_disk_usage
 from reana_commons.errors import REANAMissingWorkspaceError
@@ -310,40 +310,36 @@ def update_users_disk_quota(
         update policy.
     """
     from reana_db.config import DEFAULT_QUOTA_RESOURCES
+    from reana_db.database import Session
     from reana_db.models import Resource, ResourceType, User, UserResource
 
     if not override_policy_checks and should_skip_quota_update(ResourceType.disk):
         return
 
+    disk_resource = get_default_quota_resource(ResourceType.disk.name)
+
     users = [user] if user else User.query.all()
     timer = Timer("User disk quota usage update", total=len(users))
     for u in users:
-        disk_resource = Resource.query.filter_by(
-            name=DEFAULT_QUOTA_RESOURCES["disk"]
-        ).one_or_none()
-
-        if disk_resource:
-            from .database import Session
-
-            user_resource_quota = UserResource.query.filter_by(
-                user_id=u.id_, resource_id=disk_resource.id_
-            ).first()
-            if bytes_to_sum is not None:
-                updated_quota_usage = user_resource_quota.quota_used + bytes_to_sum
-                if updated_quota_usage < 0:
-                    logging.warning(
-                        f"Disk quota consumption of user {u.id_} would become negative: "
-                        f"{user_resource_quota.quota_used} [original usage] + {bytes_to_sum} [delta] "
-                        f"-> {updated_quota_usage} [new usage]. Setting the new usage to zero."
-                    )
-                    user_resource_quota.quota_used = 0
-                else:
-                    user_resource_quota.quota_used = updated_quota_usage
+        user_resource_quota = UserResource.query.filter_by(
+            user_id=u.id_, resource_id=disk_resource.id_
+        ).one()
+        if bytes_to_sum is not None:
+            updated_quota_usage = user_resource_quota.quota_used + bytes_to_sum
+            if updated_quota_usage < 0:
+                logging.warning(
+                    f"Disk quota consumption of user {u.id_} would become negative: "
+                    f"{user_resource_quota.quota_used} [original usage] + {bytes_to_sum} [delta] "
+                    f"-> {updated_quota_usage} [new usage]. Setting the new usage to zero."
+                )
+                user_resource_quota.quota_used = 0
             else:
-                workspace_path = u.get_user_workspace()
-                disk_usage_bytes = get_disk_usage_or_zero(workspace_path)
-                user_resource_quota.quota_used = disk_usage_bytes
-            Session.commit()
+                user_resource_quota.quota_used = updated_quota_usage
+        else:
+            workspace_path = u.get_user_workspace()
+            disk_usage_bytes = get_disk_usage_or_zero(workspace_path)
+            user_resource_quota.quota_used = disk_usage_bytes
+        Session.commit()
         timer.count_event()
 
 
@@ -360,11 +356,15 @@ def update_workflow_cpu_quota(workflow) -> int:
         WorkflowResource,
     )
 
+    if should_skip_quota_update(ResourceType.cpu):
+        return
+
+    cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
+
     terminated_at = workflow.run_finished_at or workflow.run_stopped_at
     if workflow.run_started_at and terminated_at:
         cpu_time = terminated_at - workflow.run_started_at
         cpu_milliseconds = int(cpu_time.total_seconds() * 1000)
-        cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
         # WorkflowResource might exist already if the cluster
         # follows a combined termination + periodic policy (eg. created
         # by the status listener, revisited by the cronjob)
@@ -379,23 +379,40 @@ def update_workflow_cpu_quota(workflow) -> int:
                 resource_id=cpu_resource.id_,
                 quota_used=cpu_milliseconds,
             )
-            user_resource_quota = UserResource.query.filter_by(
-                user_id=workflow.owner_id, resource_id=cpu_resource.id_
-            ).first()
-            user_resource_quota.quota_used += cpu_milliseconds
             Session.add(workflow_resource)
         Session.commit()
         return cpu_milliseconds
     return 0
 
 
+def update_workflows_cpu_quota() -> None:
+    """Update the CPU quotas of all workflows in a more efficient way."""
+    from reana_db.database import Session
+    from reana_db.models import Workflow
+
+    # logs and reana_specification are not loaded to avoid consuming
+    # huge amounts of memory
+    workflows = Workflow.query.options(
+        defer(Workflow.logs), defer(Workflow.reana_specification)
+    ).all()
+    # We expunge all the workflows, as they will not be modified when updating the quotas.
+    # This makes `Session.commit()` much faster
+    for workflow in workflows:
+        Session.expunge(workflow)
+    timer = Timer("Workflow CPU quota usage update", total=len(workflows))
+    for workflow in workflows:
+        update_workflow_cpu_quota(workflow)
+        timer.count_event()
+
+
 def update_users_cpu_quota(user=None) -> None:
     """Update users CPU quota usage.
 
+    User CPU quotas will be calculated from workflow CPU quotas,
+    so the latter should be updated before the former.
+
     :param user: User whose CPU quota will be updated. If None, applies to all users.
-
     :type user: reana_db.models.User
-
     """
     from reana_db.database import Session
     from reana_db.models import (
@@ -404,11 +421,13 @@ def update_users_cpu_quota(user=None) -> None:
         UserResource,
         UserToken,
         UserTokenStatus,
-        Workflow,
+        WorkflowResource,
     )
 
     if should_skip_quota_update(ResourceType.cpu):
         return
+
+    cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
 
     if user:
         users = [user]
@@ -419,25 +438,21 @@ def update_users_cpu_quota(user=None) -> None:
             .all()
         )
     timer_user = Timer("User CPU quota usage update", total=len(users))
-    timer_workflow = Timer("Workflow CPU quota usage update")
     for user in users:
-        cpu_milliseconds = 0
-        # logs and reana_specification are not loaded to avoid consuming
-        # huge amounts of memory
-        for workflow in user.workflows.options(
-            defer(Workflow.logs),
-            defer(Workflow.reana_specification),
-        ):
-            cpu_milliseconds += update_workflow_cpu_quota(workflow=workflow)
-            timer_workflow.count_event()
-        cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
+        cpu_milliseconds = (
+            Session.query(func.sum(WorkflowResource.quota_used))
+            .filter(WorkflowResource.resource_id == cpu_resource.id_)
+            .join(user.workflows.subquery())
+            .scalar()
+        )
+        if not cpu_milliseconds:
+            cpu_milliseconds = 0
         user_resource_quota = UserResource.query.filter_by(
             user_id=user.id_, resource_id=cpu_resource.id_
         ).first()
         user_resource_quota.quota_used = cpu_milliseconds
         Session.commit()
         timer_user.count_event()
-    timer_workflow.log_progress()
 
 
 def update_workspace_retention_rules(rules, status) -> None:
@@ -534,7 +549,7 @@ def store_workflow_disk_quota(
                 workflow.workspace_path
             )
         Session.commit()
-    elif inspect(workflow).persistent:
+    else:
         workflow_resource = WorkflowResource(
             workflow_id=workflow.id_,
             resource_id=disk_resource.id_,
@@ -544,3 +559,23 @@ def store_workflow_disk_quota(
         Session.commit()
 
     return workflow_resource
+
+
+def update_workflows_disk_quota() -> None:
+    """Update the disk quotas of all workflows in a more efficient way."""
+    from reana_db.database import Session
+    from reana_db.models import Workflow
+
+    # logs and reana_specification are not loaded to avoid consuming
+    # huge amounts of memory
+    workflows = Workflow.query.options(
+        defer(Workflow.logs), defer(Workflow.reana_specification)
+    ).all()
+    # We expunge all the workflows, as they will not be modified when updating the quotas.
+    # This makes `Session.commit()` much faster
+    for workflow in workflows:
+        Session.expunge(workflow)
+    timer = Timer("Workflow disk quota usage update", total=len(workflows))
+    for workflow in workflows:
+        store_workflow_disk_quota(workflow)
+        timer.count_event()

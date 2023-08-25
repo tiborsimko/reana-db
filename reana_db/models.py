@@ -60,6 +60,7 @@ from reana_db.config import (
 from reana_db.utils import (
     build_workspace_path,
     store_workflow_disk_quota,
+    update_users_cpu_quota,
     update_users_disk_quota,
     update_workflow_cpu_quota,
     update_workspace_retention_rules,
@@ -768,6 +769,7 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
 
         try:
             update_workflow_cpu_quota(workflow=workflow)
+            update_users_cpu_quota(user=workflow.owner)
         except Exception as e:
             logging.error(f"Failed to update cpu quota: \n{e}\nContinuing...")
 

@@ -30,6 +30,9 @@ from reana_db.models import (
 from reana_db.utils import (
     get_default_quota_resource,
     update_users_cpu_quota,
+    update_workflows_cpu_quota,
+    update_workflows_disk_quota,
+    update_users_disk_quota,
     update_workspace_retention_rules,
 )
 
@@ -274,6 +277,10 @@ def test_access_token(db, session, new_user):
     "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
     [ResourceType.cpu.name, ResourceType.disk.name],
 )
+@mock.patch(
+    "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+    [ResourceType.cpu.name, ResourceType.disk.name],
+)
 def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     """Test quota usage update once workflow is finished/stopped/failed."""
     time_elapsed_seconds = 0.5
@@ -353,6 +360,9 @@ def test_all_users_cpu_quota_usage_update(
         "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
         workflow_termination_quota_update_policy,
     ), mock.patch(
+        "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        workflow_termination_quota_update_policy,
+    ), mock.patch(
         "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY",
         periodic_update,
     ):
@@ -367,6 +377,7 @@ def test_all_users_cpu_quota_usage_update(
         else:
             assert quota_cpu_usage == 0
 
+        update_workflows_cpu_quota()
         update_users_cpu_quota()
 
         quota_cpu_usage = new_user.get_quota_usage()["cpu"]["usage"]["raw"]
@@ -374,6 +385,60 @@ def test_all_users_cpu_quota_usage_update(
             assert quota_cpu_usage >= num_workflows * time_elapsed_seconds * 1000
         else:
             assert quota_cpu_usage == 0
+
+
+@pytest.mark.parametrize(
+    "workflow_termination_quota_update_policy, periodic_update",
+    [
+        ([], True),
+        ([], False),
+        ([ResourceType.disk.name], False),
+        ([ResourceType.disk.name], True),
+    ],
+)
+def test_all_users_disk_quota_usage_update(
+    db,
+    session,
+    new_user,
+    run_workflow,
+    workflow_termination_quota_update_policy,
+    periodic_update,
+):
+    """Test disk periodic update cronjob functionality."""
+    num_workflows = 2
+    dir_size = 128
+    with mock.patch(
+        "reana_db.models.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        workflow_termination_quota_update_policy,
+    ), mock.patch(
+        "reana_db.utils.WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY",
+        workflow_termination_quota_update_policy,
+    ), mock.patch(
+        "reana_db.utils.PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY",
+        periodic_update,
+    ), mock.patch(
+        "reana_db.utils.get_disk_usage", return_value=[{"size": {"raw": str(dir_size)}}]
+    ):
+        workflows = [run_workflow() for n in range(num_workflows)]
+
+        quota_disk_usage = new_user.get_quota_usage()["disk"]["usage"]["raw"]
+        if workflow_termination_quota_update_policy:
+            for wf in workflows:
+                assert wf.resources[0].quota_used == dir_size
+            assert quota_disk_usage == dir_size
+        else:
+            assert quota_disk_usage == 0
+
+        update_workflows_disk_quota()
+        update_users_disk_quota()
+
+        quota_disk_usage = new_user.get_quota_usage()["disk"]["usage"]["raw"]
+        if workflow_termination_quota_update_policy or periodic_update:
+            for wf in workflows:
+                assert wf.resources[0].quota_used == dir_size
+            assert quota_disk_usage == dir_size
+        else:
+            assert quota_disk_usage == 0
 
 
 @pytest.mark.parametrize(

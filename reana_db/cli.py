@@ -15,17 +15,16 @@ import sys
 import click
 from alembic import command
 from alembic import config as alembic_config
-from sqlalchemy.orm import defer
 from reana_commons.config import REANA_LOG_FORMAT, REANA_LOG_LEVEL
 
 
 from reana_db.database import init_db
-from reana_db.models import Resource, ResourceType, Workflow
+from reana_db.models import Resource, ResourceType
 from reana_db.utils import (
-    Timer,
-    store_workflow_disk_quota,
     update_users_cpu_quota,
     update_users_disk_quota,
+    update_workflows_cpu_quota,
+    update_workflows_disk_quota,
 )
 
 # Set up logging for CLI commands
@@ -253,22 +252,19 @@ def resource_usage_update() -> None:
         """Update users resource quota usage."""
         try:
             if resource == ResourceType.disk:
+                update_workflows_disk_quota()
                 update_users_disk_quota()
-
-                # logs and reana_specification are not loaded to avoid consuming
-                # huge amounts of memory
-                workflows = Workflow.query.options(
-                    defer(Workflow.logs), defer(Workflow.reana_specification)
-                ).all()
-                timer = Timer("Workflow disk quota usage update", total=len(workflows))
-                for workflow in workflows:
-                    store_workflow_disk_quota(workflow)
-                    timer.count_event()
+                click.secho(
+                    "Disk quota usage updated successfully for all users and workflows.",
+                    fg="green",
+                )
             elif resource == ResourceType.cpu:
+                update_workflows_cpu_quota()
                 update_users_cpu_quota()
-            click.secho(
-                f"Users {resource.name} quota usage updated successfully.", fg="green"
-            )
+                click.secho(
+                    "CPU quota usage updated successfully for all users and workflows.",
+                    fg="green",
+                )
         except Exception as e:
             click.secho(
                 f"[ERROR]: An error occurred when updating users {resource.name} quota usage: {repr(e)}",
