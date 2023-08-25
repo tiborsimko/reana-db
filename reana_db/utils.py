@@ -299,6 +299,10 @@ def update_users_disk_quota(
 ) -> None:
     """Update users disk quota usage.
 
+    User disk quota usage will be calculated from the individual workflow disk quota
+    usage numbers, so this function should be typically called only after
+    ``update_workflows_disk_quota()``.
+
     :param user: User whose disk quota will be updated. If None, applies to all users.
     :param bytes_to_sum: Amount of bytes to sum to user disk quota,
         if None, `du` will be used to recalculate it.
@@ -309,9 +313,14 @@ def update_users_disk_quota(
     :param override_policy_checks: Whether to update the disk quota without checking the
         update policy.
     """
-    from reana_db.config import DEFAULT_QUOTA_RESOURCES
     from reana_db.database import Session
-    from reana_db.models import Resource, ResourceType, User, UserResource
+    from reana_db.models import (
+        Workflow,
+        WorkflowResource,
+        ResourceType,
+        User,
+        UserResource,
+    )
 
     if not override_policy_checks and should_skip_quota_update(ResourceType.disk):
         return
@@ -336,8 +345,25 @@ def update_users_disk_quota(
             else:
                 user_resource_quota.quota_used = updated_quota_usage
         else:
-            workspace_path = u.get_user_workspace()
-            disk_usage_bytes = get_disk_usage_or_zero(workspace_path)
+            # get the size of each workspace of each workflow of the given user
+            size_per_workspace = (
+                Session.query(
+                    Workflow.workspace_path,
+                    func.max(WorkflowResource.quota_used).label("quota_used"),
+                )
+                .filter(WorkflowResource.workflow_id == Workflow.id_)
+                .filter(WorkflowResource.resource_id == disk_resource.id_)
+                .filter(Workflow.id_.in_(Session.query(u.workflows.subquery().c.id_)))
+                # multiple workflows might have the same workspace path, so the query groups
+                # by `workspace_path` in order to consider each workspace only once
+                .group_by(Workflow.workspace_path)
+                .subquery()
+            )
+            disk_usage_bytes = Session.query(
+                func.sum(size_per_workspace.c.quota_used)
+            ).scalar()
+            if not disk_usage_bytes:
+                disk_usage_bytes = 0
             user_resource_quota.quota_used = disk_usage_bytes
         Session.commit()
         timer.count_event()

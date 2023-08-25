@@ -758,8 +758,8 @@ def workflow_status_change_listener(workflow, new_status, old_status, initiator)
             return
 
         try:
-            update_users_disk_quota(user=workflow.owner)
             store_workflow_disk_quota(workflow)
+            update_users_disk_quota(user=workflow.owner)
         except Exception as e:
             logging.error(f"Failed to update disk quota: \n{e}\nContinuing...")
 

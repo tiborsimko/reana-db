@@ -333,7 +333,7 @@ def test_workflow_termination_user_quota_usage(
             quota_usage["cpu"]["usage"]["raw"] == 0
 
         if ResourceType.disk.name in workflow_termination_quota_update_policy:
-            assert quota_usage["disk"]["usage"]["raw"] == 128
+            assert quota_usage["disk"]["usage"]["raw"] == 128 * num_workflows
         else:
             quota_usage["disk"]["usage"]["raw"] == 0
 
@@ -425,7 +425,7 @@ def test_all_users_disk_quota_usage_update(
         if workflow_termination_quota_update_policy:
             for wf in workflows:
                 assert wf.resources[0].quota_used == dir_size
-            assert quota_disk_usage == dir_size
+            assert quota_disk_usage == dir_size * num_workflows
         else:
             assert quota_disk_usage == 0
 
@@ -436,7 +436,7 @@ def test_all_users_disk_quota_usage_update(
         if workflow_termination_quota_update_policy or periodic_update:
             for wf in workflows:
                 assert wf.resources[0].quota_used == dir_size
-            assert quota_disk_usage == dir_size
+            assert quota_disk_usage == dir_size * num_workflows
         else:
             assert quota_disk_usage == 0
 
