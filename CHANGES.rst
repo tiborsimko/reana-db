@@ -1,10 +1,11 @@
 Changes
 =======
 
-Version 0.9.2 (UNRELEASED)
+Version 0.9.2 (2023-09-26)
 --------------------------
 
-- Changes CPU and disk quota calculations to improve performance of quota updater.
+- Adds progress meter to the logs of the periodic quota updater.
+- Changes CPU and disk quota calculations to improve the performance of periodic quota updater.
 - Fixes the workflow priority calculation to avoid workflows stuck in the ``queued`` status when the number of allowed concurrent workflow is set to zero.
 
 Version 0.9.1 (2023-01-18)
