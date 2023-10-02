@@ -1,6 +1,10 @@
 Changes
 =======
 
+Version 0.9.3 (UNRELEASED)
+--------------------------
+- Changes the ``Workflow`` table to replace the ``run_number`` column with two new columns ``run_number_major`` and ``run_number_minor``, in order to allow for more than 9 restarts.
+
 Version 0.9.2 (2023-09-26)
 --------------------------
 

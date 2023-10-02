@@ -16,7 +16,27 @@ import pytest
 from reana_commons.config import SHARED_VOLUME_PATH
 
 from reana_db.models import Workflow
-from reana_db.utils import _get_workflow_with_uuid_or_name
+from reana_db.utils import _get_workflow_with_uuid_or_name, split_run_number
+
+
+@pytest.mark.parametrize(
+    "run_number, run_number_major, run_number_minor",
+    [
+        ("1", 1, 0),
+        ("156.12", 156, 12),
+        ("2.4", 2, 4),
+        (3.22, 3, 22),
+        pytest.param(
+            "1.2.3",
+            None,
+            None,
+            marks=pytest.mark.xfail(raises=ValueError, strict=True),
+        ),
+    ],
+)
+def test_split_run_number(run_number, run_number_major, run_number_minor):
+    """Tests for split_run_number()."""
+    assert split_run_number(run_number) == (run_number_major, run_number_minor)
 
 
 @pytest.mark.parametrize(

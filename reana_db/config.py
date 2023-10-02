@@ -85,6 +85,3 @@ PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY = strtobool(
     os.getenv("REANA_PERIODIC_RESOURCE_QUOTA_UPDATE_POLICY", "false")
 )
 """Whether to run the periodic (cronjob) resource quota updater."""
-
-LIMIT_RESTARTS = 9
-"""Maximum number of times a workflow can be restarted."""

@@ -16,7 +16,7 @@ import logging
 import uuid
 from datetime import datetime
 from functools import reduce
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from reana_commons.config import (
     MQ_MAX_PRIORITY,
@@ -54,12 +54,12 @@ from reana_db.config import (
     DB_SECRET_KEY,
     DEFAULT_QUOTA_LIMITS,
     DEFAULT_QUOTA_RESOURCES,
-    LIMIT_RESTARTS,
     WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
 )
 from reana_db.utils import (
     build_workspace_path,
     store_workflow_disk_quota,
+    split_run_number,
     update_users_cpu_quota,
     update_users_disk_quota,
     update_workflow_cpu_quota,
@@ -459,7 +459,8 @@ class Workflow(Base, Timestamp, QuotaBase):
     run_started_at = Column(DateTime)
     run_finished_at = Column(DateTime)
     run_stopped_at = Column(DateTime)
-    _run_number = Column("run_number", Float)
+    run_number_major = Column(Integer)
+    run_number_minor = Column(Integer, default=0)
     job_progress = Column(JSONType, default=dict)
     workspace_path = Column(String)
     restart = Column(Boolean, default=False)
@@ -487,7 +488,11 @@ class Workflow(Base, Timestamp, QuotaBase):
 
     __table_args__ = (
         UniqueConstraint(
-            "name", "owner_id", "run_number", name="_user_workflow_run_uc"
+            "name",
+            "owner_id",
+            "run_number_major",
+            "run_number_minor",
+            name="_user_workflow_run_uc",
         ),
         {"schema": "__reana"},
     )
@@ -527,7 +532,9 @@ class Workflow(Base, Timestamp, QuotaBase):
         self.git_repo = git_repo
         self.git_provider = git_provider
         self.restart = restart
-        self._run_number = self.assign_run_number(run_number)
+        self.run_number_major, self.run_number_minor = self.get_new_run_number(
+            run_number
+        )
         self.workspace_path = workspace_path or build_workspace_path(
             self.owner_id, self.id_
         )
@@ -537,54 +544,66 @@ class Workflow(Base, Timestamp, QuotaBase):
         """Workflow string representation."""
         return "<Workflow %r>" % self.id_
 
-    @hybrid_property
-    def run_number(self):
-        """Property of run_number."""
-        if self._run_number.is_integer():
-            return int(self._run_number)
-        return self._run_number
+    @property
+    def run_number(self) -> str:
+        """Get workflow run number."""
+        if self.run_number_minor != 0:
+            return f"{self.run_number_major}.{self.run_number_minor}"
+        return str(self.run_number_major)
 
-    @run_number.expression
-    def run_number(cls):
-        return func.abs(cls._run_number)
-
-    def assign_run_number(self, run_number):
-        """Assing run number."""
+    def _get_last_workflow(self, run_number):
+        """Fetch the last workflow restart given a certain run number."""
         from .database import Session
 
         if run_number:
+            run_number_major, run_number_minor = split_run_number(run_number)
             last_workflow = (
                 Session.query(Workflow)
                 .filter(
                     Workflow.name == self.name,
-                    Workflow.run_number >= int(run_number),
-                    Workflow.run_number < int(run_number) + 1,
+                    Workflow.run_number_major == run_number_major,
                     Workflow.owner_id == self.owner_id,
                 )
-                .order_by(Workflow.run_number.desc())
+                .order_by(
+                    Workflow.run_number_major.desc(), Workflow.run_number_minor.desc()
+                )
                 .first()
             )
         else:
             last_workflow = (
                 Session.query(Workflow)
                 .filter_by(name=self.name, restart=False, owner_id=self.owner_id)
-                .order_by(Workflow.run_number.desc())
+                .order_by(
+                    Workflow.run_number_major.desc(), Workflow.run_number_minor.desc()
+                )
                 .first()
             )
-        if last_workflow and self.restart:
-            # FIXME: remove the limit of nine restarts when we fix the way in which
-            # we save `run_number` in the DB
-            num_restarts = round(last_workflow.run_number * 10) % 10
-            if num_restarts == LIMIT_RESTARTS:
+        return last_workflow
+
+    def get_new_run_number(self, run_number) -> Tuple[int, int]:
+        """Return the major and minor run numbers for a new workflow.
+
+        Return a tuple where the first element is the major run number and the
+        second element is the minor run number.
+        """
+        last_workflow = self._get_last_workflow(run_number)
+
+        if not last_workflow:
+            if self.restart:
                 raise REANAValidationError(
-                    f"Cannot restart a workflow more than {LIMIT_RESTARTS} times"
+                    "Cannot restart a workflow that has not been run before."
                 )
-            return round(last_workflow.run_number + 0.1, 1)
+            return 1, 0  # First workflow run
+
         else:
-            if not last_workflow:
-                return 1
+            if not self.restart:
+                run_number_major = last_workflow.run_number_major + 1
+                run_number_minor = 0
             else:
-                return last_workflow.run_number + 1
+                run_number_major = last_workflow.run_number_major
+                run_number_minor = last_workflow.run_number_minor + 1
+
+            return run_number_major, run_number_minor
 
     def get_input_parameters(self):
         """Return workflow parameters."""
@@ -604,7 +623,7 @@ class Workflow(Base, Timestamp, QuotaBase):
 
     def get_full_workflow_name(self):
         """Return full workflow name including run number."""
-        return "{}.{}".format(self.name, str(self.run_number))
+        return "{}.{}".format(self.name, self.run_number)
 
     def get_workspace_disk_usage(self, summarize=False, search=None):
         """Retrieve disk usage information of a workspace."""
@@ -643,15 +662,13 @@ class Workflow(Base, Timestamp, QuotaBase):
         """Get all the restarts of this workflow, including the original workflow.
 
         Returns all the restarts of this workflow, that is all the workflows that have
-        the same name and the same run number (up to the dot). This includes the
+        the same name and the same major run number. This includes the
         original workflow, as well as all the following restarts.
         """
-        run_number = int(self.run_number)
         restarts = Workflow.query.filter(
             Workflow.name == self.name,
             Workflow.owner_id == self.owner_id,
-            Workflow.run_number >= run_number,
-            Workflow.run_number < run_number + 1,
+            Workflow.run_number_major == self.run_number_major,
         )
         return restarts
 

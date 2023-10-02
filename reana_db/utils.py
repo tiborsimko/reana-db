@@ -52,6 +52,14 @@ def build_workspace_path(user_id, workflow_id=None, workspace_root_path=None):
     return workspace_path
 
 
+def split_run_number(run_number):
+    """Split run number into major and minor run numbers."""
+    run_number = str(run_number)
+    if "." in run_number:
+        return tuple(map(int, run_number.split(".", maxsplit=1)))
+    return int(run_number), 0
+
+
 def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
     """Get Workflow from database with uuid or name.
 
@@ -128,21 +136,20 @@ def _get_workflow_with_uuid_or_name(uuid_or_name, user_uuid):
             return _get_workflow_by_name(workflow_name, user_uuid)
 
         # `run_number` was specified.
-        # Check `run_number` is valid.
         try:
-            run_number = float(run_number)
+            run_number_major, run_number_minor = split_run_number(run_number)
         except ValueError:
-            # `uuid_or_name` was split, so it is a dot-separated string
-            # but it didn't contain a valid `run_number`.
-            # Assume that this dot-separated string is the name of
+            # The specified `run_number` is not valid.
+            # Assume that this string is the name of
             # the workflow and search with it.
             return _get_workflow_by_name(uuid_or_name, user_uuid)
 
         # `run_number` is valid.
-        # Search by `run_number` since it is a primary key.
+        # Search by `run_number_major` and `run_number_minor`, since it is a primary key.
         workflow = Workflow.query.filter(
             Workflow.name == workflow_name,
-            Workflow.run_number == run_number,
+            Workflow.run_number_major == run_number_major,
+            Workflow.run_number_minor == run_number_minor,
             Workflow.owner_id == user_uuid,
         ).one_or_none()
         if not workflow:
@@ -169,7 +176,7 @@ def _get_workflow_by_name(workflow_name, user_uuid):
         Workflow.query.filter(
             Workflow.name == workflow_name, Workflow.owner_id == user_uuid
         )
-        .order_by(Workflow.run_number.desc())
+        .order_by(Workflow.run_number_major.desc(), Workflow.run_number_minor.desc())
         .first()
     )
     if not workflow:

@@ -51,7 +51,9 @@ def test_workflow_run_number_assignment(db, session, new_user):
     )
     session.add(first_workflow)
     session.commit()
-    assert first_workflow.run_number == 1
+    assert first_workflow.run_number == "1"
+    assert first_workflow.run_number_major == 1
+    assert first_workflow.run_number_minor == 0
     second_workflow = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
@@ -62,7 +64,9 @@ def test_workflow_run_number_assignment(db, session, new_user):
     )
     session.add(second_workflow)
     session.commit()
-    assert second_workflow.run_number == 2
+    assert second_workflow.run_number == "2"
+    assert second_workflow.run_number_major == 2
+    assert second_workflow.run_number_minor == 0
     first_workflow_restart = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
@@ -75,7 +79,9 @@ def test_workflow_run_number_assignment(db, session, new_user):
     )
     session.add(first_workflow_restart)
     session.commit()
-    assert first_workflow_restart.run_number == 1.1
+    assert first_workflow_restart.run_number == "1.1"
+    assert first_workflow_restart.run_number_major == 1
+    assert first_workflow_restart.run_number_minor == 1
     first_workflow_second_restart = Workflow(
         id_=str(uuid4()),
         name=workflow_name,
@@ -88,7 +94,9 @@ def test_workflow_run_number_assignment(db, session, new_user):
     )
     session.add(first_workflow_second_restart)
     session.commit()
-    assert first_workflow_second_restart.run_number == 1.2
+    assert first_workflow_second_restart.run_number == "1.2"
+    assert first_workflow_second_restart.run_number_major == 1
+    assert first_workflow_second_restart.run_number_minor == 2
 
 
 def test_workflow_retention_rules(db, session, new_user):
