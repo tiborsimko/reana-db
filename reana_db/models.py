@@ -35,6 +35,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    MetaData,
     String,
     Text,
     UniqueConstraint,
@@ -67,7 +68,18 @@ from reana_db.utils import (
 )
 
 
-Base = declarative_base()
+convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+"""Constraint naming convention."""
+
+metadata_obj = MetaData(naming_convention=convention)
+
+Base = declarative_base(metadata=metadata_obj)
 
 
 def generate_uuid():
@@ -420,7 +432,7 @@ class InteractiveSession(Base, Timestamp, QuotaBase):
     """Interactive Session table."""
 
     __tablename__ = "interactive_session"
-    id_ = Column(UUIDType, primary_key=True, unique=True, default=generate_uuid)
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
     name = Column(String(255))
     path = Column(Text)  # path to access the interactive session
     status = Column(Enum(RunStatus), nullable=False, default=RunStatus.created)
@@ -432,7 +444,7 @@ class InteractiveSession(Base, Timestamp, QuotaBase):
     )
 
     __table_args__ = (
-        UniqueConstraint("name", "path", name="_interactive_session_uc"),
+        UniqueConstraint("name", "path"),
         {"schema": "__reana"},
     )
 
@@ -492,7 +504,6 @@ class Workflow(Base, Timestamp, QuotaBase):
             "owner_id",
             "run_number_major",
             "run_number_minor",
-            name="_user_workflow_run_uc",
         ),
         {"schema": "__reana"},
     )
@@ -962,9 +973,7 @@ class WorkspaceRetentionRule(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint(
-            "workflow_id", "workspace_files", name="_workspace_retention_rule_uc"
-        ),
+        UniqueConstraint("workflow_id", "workspace_files"),
         {"schema": "__reana"},
     )
 
