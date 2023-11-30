@@ -1,12 +1,12 @@
 Changes
 =======
 
-Version 0.9.3 (UNRELEASED)
+Version 0.9.3 (2023-12-01)
 --------------------------
 
-- Changes the ``Workflow`` table to replace the ``run_number`` column with two new columns ``run_number_major`` and ``run_number_minor``, in order to allow for more than 9 restarts.
-- Changes the names of database constraints to follow the same naming convention.
-- Changes the database indexes to improve performance of common database queries.
+- Changes the ``Workflow`` table to replace the ``run_number`` column with two new columns ``run_number_major`` and ``run_number_minor`` in order to allow for more than nine restarts of user workflows.
+- Changes the names of database table, column, index and key constraints in order to follow the SQLAlchemy upstream naming conventions everywhere.
+- Changes several database index definitions in order to improve performance of most common database queries.
 
 Version 0.9.2 (2023-09-26)
 --------------------------
