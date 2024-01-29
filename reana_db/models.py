@@ -1058,9 +1058,11 @@ class ResourceUnit(enum.Enum):
 
         converted_value = round(bytes_ / math.pow(k, unit_index), digits)
         return "{converted_value} {converted_unit}".format(
-            converted_value=int(converted_value)
-            if converted_value.is_integer()
-            else converted_value,
+            converted_value=(
+                int(converted_value)
+                if converted_value.is_integer()
+                else converted_value
+            ),
             converted_unit=units[unit_index],
         )
 
