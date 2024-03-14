@@ -19,7 +19,7 @@ readme = open("README.md").read()
 history = open("CHANGELOG.md").read()
 
 tests_require = [
-    "pytest-reana>=0.95.0a1,<0.96.0",
+    "pytest-reana>=0.95.0a2,<0.96.0",
 ]
 
 extras_require = {
@@ -47,7 +47,7 @@ install_requires = [
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=1.2.7,<1.4.0",
     "SQLAlchemy-Utils[encrypted]>=0.36.8",
-    "reana-commons>=0.9.4,<0.96.0",
+    "reana-commons>=0.95.0a1,<0.96.0",
 ]
 
 packages = find_packages()
