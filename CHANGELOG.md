@@ -1,5 +1,71 @@
 # Changelog
 
+## [0.95.0](https://github.com/tiborsimko/reana-db/compare/v0.9.4...0.95.0) (2024-08-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **python:** drop support for Python 3.6 and 3.7
+
+### Build
+
+* **python:** add minimal `pyproject.toml` ([#237](https://github.com/tiborsimko/reana-db/issues/237)) ([de1e03b](https://github.com/tiborsimko/reana-db/commit/de1e03b7f81fd1a49b9c2abdc7c5b6d164fe1f37))
+* **python:** add support for SQLAlchemy 1.4 ([#234](https://github.com/tiborsimko/reana-db/issues/234)) ([f341b21](https://github.com/tiborsimko/reana-db/commit/f341b21f203225f9537073fe67ec42578db11f02)), closes [#228](https://github.com/tiborsimko/reana-db/issues/228)
+* **python:** drop support for Python 3.6 and 3.7 ([#235](https://github.com/tiborsimko/reana-db/issues/235)) ([16448cd](https://github.com/tiborsimko/reana-db/commit/16448cd8e319661ce73697e6c66d138e0728b228))
+* **python:** remove deprecated `pytest-runner` ([#237](https://github.com/tiborsimko/reana-db/issues/237)) ([09f2df8](https://github.com/tiborsimko/reana-db/commit/09f2df890be324841f3842cc73c8554b6be969a3))
+* **python:** use optional deps instead of `tests_require` ([#237](https://github.com/tiborsimko/reana-db/issues/237)) ([18302ea](https://github.com/tiborsimko/reana-db/commit/18302ea372e76f6c05e65625f921902cbfb51710))
+
+
+### Bug fixes
+
+* **models:** remove duplicated User-Workflow relationship ([#234](https://github.com/tiborsimko/reana-db/issues/234)) ([a364bb0](https://github.com/tiborsimko/reana-db/commit/a364bb0a5db5bedf5c00b21e437ea8da1abd62df))
+
+
+### Code refactoring
+
+* **docs:** move from reST to Markdown ([#225](https://github.com/tiborsimko/reana-db/issues/225)) ([b48eb55](https://github.com/tiborsimko/reana-db/commit/b48eb55f7a1b1bbdde0e0a458852349a439a511e))
+
+
+### Code style
+
+* **black:** format with black v24 ([#224](https://github.com/tiborsimko/reana-db/issues/224)) ([cc60522](https://github.com/tiborsimko/reana-db/commit/cc6052242fd14cf3413b793d0aa32a24871fe1b1))
+
+
+### Continuous integration
+
+* **actions:** update GitHub actions due to Node 16 deprecation ([#233](https://github.com/tiborsimko/reana-db/issues/233)) ([f418dfb](https://github.com/tiborsimko/reana-db/commit/f418dfba0b5b9c49039e7f64944104ed4685b78c))
+* added flake8 linter ([5f5c3a2](https://github.com/tiborsimko/reana-db/commit/5f5c3a2a4a0daa5b874f41c1becff7a38bbe9b6e))
+* added github actions workflow ([f2b4dfa](https://github.com/tiborsimko/reana-db/commit/f2b4dfa8405a0362fa3cbab05a5e65a6ecee6671))
+* added python 2.7 to github action python test strategy ([11faa73](https://github.com/tiborsimko/reana-db/commit/11faa7345d6b41068391dd30e2b07a76823aee39)), closes [#107](https://github.com/tiborsimko/reana-db/issues/107)
+* adopted db models to work with python 2.7 ([63cb814](https://github.com/tiborsimko/reana-db/commit/63cb814b1867bf3ec8056fc8f8b24179ead0b67a)), closes [#107](https://github.com/tiborsimko/reana-db/issues/107)
+* **commitlint:** addition of commit message linter ([#218](https://github.com/tiborsimko/reana-db/issues/218)) ([ee0f7e5](https://github.com/tiborsimko/reana-db/commit/ee0f7e5e106e0be619779bfa2133415feecc323b))
+* **commitlint:** allow release commit style ([#229](https://github.com/tiborsimko/reana-db/issues/229)) ([adf15d7](https://github.com/tiborsimko/reana-db/commit/adf15d7c6457eddadc3da1aa8b95b74cfc1239fb))
+* **commitlint:** check for the presence of concrete PR number ([#223](https://github.com/tiborsimko/reana-db/issues/223)) ([3d513f6](https://github.com/tiborsimko/reana-db/commit/3d513f6cda44e9e40b3c8f3967fcb87d113287ec))
+* pin ubuntu version in GA jobs ([712b138](https://github.com/tiborsimko/reana-db/commit/712b13893c72420a596f42b9a9496c7e93ff4624))
+* **pytest:** invoke `pytest` directly instead of `setup.py test` ([#237](https://github.com/tiborsimko/reana-db/issues/237)) ([6b23c4d](https://github.com/tiborsimko/reana-db/commit/6b23c4de09aea1758b2cffa62fbdd8a09ba0a150))
+* **pytest:** move to PostgreSQL 14.10 ([#226](https://github.com/tiborsimko/reana-db/issues/226)) ([4dac889](https://github.com/tiborsimko/reana-db/commit/4dac88953754c0810d3502e8e511ec90c27c2b43))
+* **release-please:** initial configuration ([#218](https://github.com/tiborsimko/reana-db/issues/218)) ([7c616d6](https://github.com/tiborsimko/reana-db/commit/7c616d67fac642656f56d37422ba69c4a8d4fa20))
+* **shellcheck:** fix exit code propagation ([#223](https://github.com/tiborsimko/reana-db/issues/223)) ([b62ee1e](https://github.com/tiborsimko/reana-db/commit/b62ee1e3be44628265bf5ada7e0b7eb88e283c00))
+* update all actions ([50b73e2](https://github.com/tiborsimko/reana-db/commit/50b73e238eec5d9a6204b90c22b7d554208f53d6))
+
+
+### Documentation
+
+* add .readthedocs.yaml to migrate to RTD v2 ([6524827](https://github.com/tiborsimko/reana-db/commit/6524827d45b46427941b1065050be4dc5544ac0d))
+* **authors:** complete list of contributors ([#227](https://github.com/tiborsimko/reana-db/issues/227)) ([3fbcf65](https://github.com/tiborsimko/reana-db/commit/3fbcf65db735146d54078cae4c5b9c8968ead055))
+* fix rtfd build badge so it shows the real status ([51f36b9](https://github.com/tiborsimko/reana-db/commit/51f36b91bbf67f3e494081b530c28bd0e2b0dc4f))
+* include modules documentation ([fd5c7b1](https://github.com/tiborsimko/reana-db/commit/fd5c7b160ab083c535276d1af7de7fd554d8e8b2))
+* Python versions shield ([ec55933](https://github.com/tiborsimko/reana-db/commit/ec559332f636b1bf8c7a735de79acb493b88a52b))
+* replace reference to analyse with workflow ([73b9339](https://github.com/tiborsimko/reana-db/commit/73b93392d92418d101fe2b3eefbe94929173be8f))
+* set default language to English ([7a21184](https://github.com/tiborsimko/reana-db/commit/7a211845c893fe418d2a47efb3e18ed16c22b006))
+* single-page RTFD outline ([ce07a07](https://github.com/tiborsimko/reana-db/commit/ce07a07ec6f5bb667fb20ee66aca48fa68f61836))
+* use REANA logo ([6d632e0](https://github.com/tiborsimko/reana-db/commit/6d632e073fca55243677aa10bd8675d43e50fd28))
+
+
+### Chores
+
+* **master:** release 0.95.0a1 ([ec7c5e5](https://github.com/tiborsimko/reana-db/commit/ec7c5e5801fb7954bc8b8e652674e64d67526838))
+
 ## [0.9.4](https://github.com/reanahub/reana-db/compare/0.9.3...0.9.4) (2024-03-01)
 
 
