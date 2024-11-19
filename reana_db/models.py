@@ -470,6 +470,63 @@ class InteractiveSession(Base, Timestamp, QuotaBase):
         return "<InteractiveSession %r>" % self.name
 
 
+class WorkflowService(Base):
+    """Workflow Service table."""
+
+    __tablename__ = "workflow_service"
+    __table_args__ = {"schema": "__reana"}
+
+    workflow_id = Column(UUIDType, ForeignKey("__reana.workflow.id_"), nullable=True)
+    service_id = Column(UUIDType, ForeignKey("__reana.service.id_"), primary_key=True)
+
+    def __repr__(self):
+        """Workflow Service string representation."""
+        return f"<WorkflowService {self.service_id} {self.workflow_id}>"
+
+
+class ServiceStatus(CleanUpDependingOnStatusMixin, enum.Enum):
+    """Enumeration of possible run statuses."""
+
+    created = 0
+    running = 1
+    finished = 2
+    failed = 3
+    deleted = 4
+    stopped = 5
+    queued = 6
+    pending = 7
+
+
+class ServiceType(enum.Enum):
+    """Enumeration of service types."""
+
+    dask = 0
+
+
+class Service(Base):
+    """Service table."""
+
+    __tablename__ = "service"
+    id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
+    name = Column(String(255))
+    uri = Column(Text)  # uri to access the service
+    status = Column(Enum(ServiceStatus), nullable=False, default=ServiceStatus.created)
+    owner_id = Column(UUIDType, ForeignKey("__reana.user_.id_"))
+    type_ = Column(
+        Enum(ServiceType),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("name", "uri"),
+        {"schema": "__reana"},
+    )
+
+    def __repr__(self):
+        """Service string representation."""
+        return f"<Service(name={self.name}, type={self.type_}, uri={self.uri})>"
+
+
 class Workflow(Base, Timestamp, QuotaBase):
     """Workflow table."""
 
@@ -506,6 +563,13 @@ class Workflow(Base, Timestamp, QuotaBase):
     sessions = relationship(
         "InteractiveSession",
         secondary="__reana.workflow_session",
+        lazy="dynamic",
+        backref="workflow",
+        cascade="all, delete",
+    )
+    services = relationship(
+        "Service",
+        secondary="__reana.workflow_service",
         lazy="dynamic",
         backref="workflow",
         cascade="all, delete",
