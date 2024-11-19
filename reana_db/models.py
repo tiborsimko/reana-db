@@ -51,8 +51,8 @@ from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 from sqlalchemy.dialects.postgresql import ARRAY
 
+import reana_db.config
 from reana_db.config import (
-    DB_SECRET_KEY,
     DEFAULT_QUOTA_LIMITS,
     DEFAULT_QUOTA_RESOURCES,
     WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
@@ -85,6 +85,15 @@ Base = declarative_base(metadata=metadata_obj)
 def generate_uuid():
     """Generate new uuid."""
     return str(uuid.uuid4())
+
+
+def _secret_key():
+    """Secret key used to encrypt databse columns.
+
+    Do not use `DB_SECRET_KEY` directly, as that does not let us change the key
+    at runtime, which is needed when migrating between different keys.
+    """
+    return reana_db.config.DB_SECRET_KEY
 
 
 class QuotaBase:
@@ -326,7 +335,7 @@ class UserToken(Base, Timestamp):
 
     id_ = Column(UUIDType, primary_key=True, default=generate_uuid)
     token = Column(
-        EncryptedType(String(length=255), DB_SECRET_KEY, AesEngine, "pkcs5"),
+        EncryptedType(String(length=255), _secret_key, AesEngine, "pkcs5"),
         unique=True,
     )
     status = Column(Enum(UserTokenStatus))

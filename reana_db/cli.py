@@ -21,6 +21,7 @@ from reana_commons.config import REANA_LOG_FORMAT, REANA_LOG_LEVEL
 from reana_db.database import init_db
 from reana_db.models import Resource, ResourceType
 from reana_db.utils import (
+    change_key_encrypted_columns,
     update_users_cpu_quota,
     update_users_disk_quota,
     update_workflows_cpu_quota,
@@ -41,6 +42,25 @@ def init():
     """Show REANA database migration recipes history."""
     init_db()
     click.secho("Database initialised.", fg="green")
+
+
+@cli.command()
+@click.option(
+    "--old-key",
+    required=True,
+    help="Previous key used to encrypt database columns.",
+)
+def migrate_secret_key(old_key):
+    """Change the secret key used to encrypt database columns."""
+    click.echo("Migrating secret key...")
+
+    try:
+        change_key_encrypted_columns(old_key)
+    except Exception:
+        logging.exception("Failed to migrate secret key")
+        sys.exit(1)
+
+    click.echo("Successfully migrated secret key")
 
 
 @cli.group("alembic")
