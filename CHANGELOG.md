@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.5](https://github.com/reanahub/reana-db/compare/0.9.4...0.9.5) (2024-11-26)
+
+
+### Features
+
+* **cli:** add new `migrate-secret-key` command ([#240](https://github.com/reanahub/reana-db/issues/240)) ([efcbe72](https://github.com/reanahub/reana-db/commit/efcbe724a2797edf94a531a2fd49ae0dc25d29f7))
+
+
+### Continuous integration
+
+* **actions:** pin setuptools 70 ([#239](https://github.com/reanahub/reana-db/issues/239)) ([3202759](https://github.com/reanahub/reana-db/commit/320275969c64513f695ce59a145088f6222aa594))
+* **python:** test more Python versions ([#239](https://github.com/reanahub/reana-db/issues/239)) ([e0cba7f](https://github.com/reanahub/reana-db/commit/e0cba7faa97cbf2919c4008ec884ea46ec817cd5))
+
 ## [0.9.4](https://github.com/reanahub/reana-db/compare/0.9.3...0.9.4) (2024-03-01)
 
 
