@@ -670,3 +670,33 @@ def update_workflows_disk_quota() -> None:
     for workflow in workflows:
         store_workflow_disk_quota(workflow)
         timer.count_event()
+
+
+def change_key_encrypted_columns(old_key):
+    """Re-encrypt database columns with new secret key.
+
+    REANA should be already deployed with the new secret key in `REANA_SECRET_KEY`.
+    The old key is needed to decrypt the database and is passed as parameter.
+    """
+    from reana_db.database import Session
+    from reana_db.models import UserToken
+    from reana_db import config
+
+    new_key = config.DB_SECRET_KEY
+
+    # set old key to be able to decrypt columns in database
+    config.DB_SECRET_KEY = old_key
+
+    # read the columns from the database
+    user_tokens = Session.query(UserToken.id_, UserToken.token).all()
+    Session.expunge_all()
+
+    # revert to new key
+    config.DB_SECRET_KEY = new_key
+
+    # write columns to the database to encrypt them with new key
+    for user_token in user_tokens:
+        UserToken.query.filter_by(id_=user_token.id_).update(
+            {"token": user_token.token}
+        )
+    Session.commit()
