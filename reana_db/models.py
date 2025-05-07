@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -58,6 +58,7 @@ from sqlalchemy import (
     event,
     func,
     or_,
+    text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -65,7 +66,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
 from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 
 convention = {
@@ -503,6 +504,26 @@ class ServiceType(enum.Enum):
     dask = 0
 
 
+class ServiceLog(Base):
+    """ServiceLog table."""
+
+    __tablename__ = "service_logs"
+    __table_args__ = {"schema": "__reana"}
+
+    id = Column(UUIDType, primary_key=True, default=generate_uuid)
+    service_id = Column(
+        UUIDType, ForeignKey("__reana.service.id_", ondelete="CASCADE"), nullable=False
+    )
+    event_time = Column(
+        DateTime(timezone=True),
+        server_default=text("TIMEZONE('utc', CURRENT_TIMESTAMP)"),
+        nullable=False,
+    )
+    log = Column(JSONB, nullable=False)
+
+    service = relationship("Service", back_populates="logs")
+
+
 class Service(Base):
     """Service table."""
 
@@ -515,6 +536,11 @@ class Service(Base):
     type_ = Column(
         Enum(ServiceType),
         nullable=False,
+    )
+    logs = relationship(
+        "ServiceLog",
+        back_populates="service",
+        lazy="dynamic",
     )
 
     __table_args__ = (
