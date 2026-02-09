@@ -13,7 +13,6 @@ from reana_commons.config import SHARED_VOLUME_PATH
 import sqlalchemy as sa
 import os
 
-
 # revision identifiers, used by Alembic.
 revision = "6568d7cb6710"
 down_revision = "f84e17bd6b18"

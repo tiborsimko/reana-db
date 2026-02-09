@@ -68,7 +68,6 @@ from sqlalchemy_utils.models import Timestamp
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
-
 convention = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",

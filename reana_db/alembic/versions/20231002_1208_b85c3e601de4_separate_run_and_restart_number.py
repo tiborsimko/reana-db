@@ -9,7 +9,6 @@ Create Date: 2023-10-02 12:08:18.292490
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision = "b85c3e601de4"
 down_revision = "377cfbfccf75"
@@ -56,8 +55,7 @@ def upgrade():
     # (thus erroneously having the following run_number_major), in case some of them
     # were created before the limit on 9 restarts was introduced.
     op.get_bind().execute(
-        sa.text(
-            """
+        sa.text("""
             UPDATE __reana.workflow AS w
             SET
                 run_number_major = to_be_updated.new_major_run_number,
@@ -69,8 +67,7 @@ def upgrade():
                 GROUP BY w1.workspace_path
             ) AS to_be_updated
             WHERE w.workspace_path = to_be_updated.workspace_path
-            """
-        ),
+            """),
     )
 
 
