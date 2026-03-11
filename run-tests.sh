@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2018, 2020, 2021, 2022, 2023, 2024, 2025 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -12,25 +12,23 @@ set -o nounset
 export REANA_SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:mysecretpassword@localhost/postgres
 
 # Verify that db container is running before continuing
-_check_ready () {
+_check_ready() {
     RETRIES=40
-    while ! $2
-    do
+    while ! $2; do
         echo "==> [INFO] Waiting for $1, $((RETRIES--)) remaining attempts..."
         sleep 2
-        if [ $RETRIES -eq 0 ]
-        then
+        if [ $RETRIES -eq 0 ]; then
             echo "==> [ERROR] Couldn't reach $1"
             exit 1
         fi
     done
 }
 
-_db_check () {
-    docker exec --user postgres postgres__reana-db bash -c "pg_isready" &>/dev/null;
+_db_check() {
+    docker exec --user postgres postgres__reana-db bash -c "pg_isready" &>/dev/null
 }
 
-clean_old_db_container () {
+clean_old_db_container() {
     OLD="$(docker ps --all --quiet --filter=name=postgres__reana-db)"
     if [ -n "$OLD" ]; then
         echo '==> [INFO] Cleaning old DB container...'
@@ -38,22 +36,34 @@ clean_old_db_container () {
     fi
 }
 
-start_db_container () {
+start_db_container() {
     echo '==> [INFO] Starting DB container...'
     docker run --rm --name postgres__reana-db -p 5432:5432 -e POSTGRES_PASSWORD=mysecretpassword -d docker.io/library/postgres:14.10
     _check_ready "Postgres" _db_check
 }
 
-stop_db_container () {
+stop_db_container() {
     echo '==> [INFO] Stopping DB container...'
     docker stop postgres__reana-db
 }
 
-check_commitlint () {
+docs_sphinx() {
+    sphinx-build -qnNW docs docs/_build/html
+}
+
+format_black() {
+    black --check .
+}
+
+lint_commitlint() {
     from=${2:-master}
     to=${3:-HEAD}
     pr=${4:-[0-9]+}
-    npx commitlint --from="$from" --to="$to"
+    if command -v commitlint >/dev/null 2>&1; then
+        commitlint --from="$from" --to="$to"
+    else
+        npx commitlint --from="$from" --to="$to"
+    fi
     found=0
     while IFS= read -r line; do
         commit_hash=$(echo "$line" | cut -d ' ' -f 1)
@@ -71,7 +81,7 @@ check_commitlint () {
         # (iii) check absence of merge commits in feature branches
         if [ "$commit_number_of_parents" -gt 1 ]; then
             if echo "$commit_title" | grep -qE "^chore\(.*\): merge "; then
-                break  # skip checking maint-to-master merge commits
+                break # skip checking maint-to-master merge commits
             else
                 echo "✖   Merge commits are not allowed in feature branches: $commit_title"
                 found=1
@@ -83,31 +93,23 @@ check_commitlint () {
     fi
 }
 
-check_shellcheck () {
-    find . -name "*.sh" -exec shellcheck {} \+
-}
-
-check_pydocstyle () {
-    pydocstyle reana_db
-}
-
-check_black () {
-    black --check .
-}
-
-check_flake8 () {
+lint_flake8() {
     flake8 .
 }
 
-check_manifest () {
+lint_manifest() {
     check-manifest
 }
 
-check_sphinx () {
-    sphinx-build -qnNW docs docs/_build/html
+lint_pydocstyle() {
+    pydocstyle reana_db
 }
 
-check_pytest () {
+lint_shellcheck() {
+    find . -name "*.sh" -exec shellcheck {} \+
+}
+
+python_tests() {
     clean_old_db_container
     start_db_container
     trap clean_old_db_container SIGINT SIGTERM SIGSEGV ERR
@@ -115,30 +117,48 @@ check_pytest () {
     stop_db_container
 }
 
-check_all () {
-    check_shellcheck
-    check_pydocstyle
-    check_black
-    check_flake8
-    check_manifest
-    check_sphinx
-    check_pytest
+all() {
+    docs_sphinx
+    format_black
+    lint_commitlint
+    lint_flake8
+    lint_manifest
+    lint_pydocstyle
+    lint_shellcheck
+    python_tests
+}
+
+help() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  --all                Perform all checks [default]"
+    echo "  --docs-sphinx        Check Sphinx docs build"
+    echo "  --format-black       Check formatting of Python code"
+    echo "  --help               Display this help message"
+    echo "  --lint-commitlint    Check linting of commit messages"
+    echo "  --lint-flake8        Check linting of Python code"
+    echo "  --lint-manifest      Check linting of Python manifest"
+    echo "  --lint-pydocstyle    Check linting of Python docstrings"
+    echo "  --lint-shellcheck    Check linting of shell scripts"
+    echo "  --python-tests       Check Python test suite"
 }
 
 if [ $# -eq 0 ]; then
-    check_all
+    all
     exit 0
 fi
 
 arg="$1"
 case $arg in
-    --check-commitlint) check_commitlint "$@";;
-    --check-shellcheck) check_shellcheck;;
-    --check-pydocstyle) check_pydocstyle;;
-    --check-black) check_black;;
-    --check-flake8) check_flake8;;
-    --check-manifest) check_manifest;;
-    --check-sphinx) check_sphinx;;
-    --check-pytest) check_pytest;;
-    *) echo "[ERROR] Invalid argument '$arg'. Exiting." && exit 1;;
+--all) all ;;
+--help) help ;;
+--docs-sphinx) docs_sphinx ;;
+--format-black) format_black ;;
+--lint-commitlint) lint_commitlint "$@" ;;
+--lint-flake8) lint_flake8 ;;
+--lint-manifest) lint_manifest ;;
+--lint-pydocstyle) lint_pydocstyle ;;
+--lint-shellcheck) lint_shellcheck ;;
+--python-tests) python_tests ;;
+*) echo "[ERROR] Invalid argument '$arg'. Exiting." && help && exit 1 ;;
 esac
