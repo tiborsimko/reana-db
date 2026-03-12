@@ -10,8 +10,8 @@
 
 ## About
 
-REANA-DB is a component of the [REANA](http://www.reana.io/) reusable analysis platform.
-It contains REANA database models and utilities.
+REANA-DB is a component of the [REANA](http://www.reana.io/) reusable analysis
+platform. It contains REANA database models and utilities.
 
 ## Features
 
