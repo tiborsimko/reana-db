@@ -113,6 +113,10 @@ lint_shellcheck() {
     find . -name "*.sh" -exec shellcheck {} \+
 }
 
+lint_yamllint() {
+    yamllint .
+}
+
 python_tests() {
     clean_old_db_container
     start_db_container
@@ -130,6 +134,7 @@ all() {
     lint_manifest
     lint_pydocstyle
     lint_shellcheck
+    lint_yamllint
     python_tests
 }
 
@@ -146,6 +151,7 @@ help() {
     echo "  --lint-manifest      Check linting of Python manifest"
     echo "  --lint-pydocstyle    Check linting of Python docstrings"
     echo "  --lint-shellcheck    Check linting of shell scripts"
+    echo "  --lint-yamllint      Check linting of YAML files"
     echo "  --python-tests       Check Python test suite"
 }
 
@@ -166,6 +172,7 @@ case $arg in
 --lint-manifest) lint_manifest ;;
 --lint-pydocstyle) lint_pydocstyle ;;
 --lint-shellcheck) lint_shellcheck ;;
+--lint-yamllint) lint_yamllint ;;
 --python-tests) python_tests ;;
 *) echo "[ERROR] Invalid argument '$arg'. Exiting." && help && exit 1 ;;
 esac
