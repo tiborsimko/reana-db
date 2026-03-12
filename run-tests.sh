@@ -109,6 +109,10 @@ lint_manifest() {
     check-manifest
 }
 
+lint_markdownlint() {
+    markdownlint-cli2 "**/*.md"
+}
+
 lint_pydocstyle() {
     pydocstyle reana_db
 }
@@ -137,6 +141,7 @@ all() {
     lint_flake8
     lint_jsonlint
     lint_manifest
+    lint_markdownlint
     lint_pydocstyle
     lint_shellcheck
     lint_yamllint
@@ -155,6 +160,7 @@ help() {
     echo "  --lint-flake8        Check linting of Python code"
     echo "  --lint-jsonlint      Check linting of JSON files"
     echo "  --lint-manifest      Check linting of Python manifest"
+    echo "  --lint-markdownlint  Check linting of Markdown files"
     echo "  --lint-pydocstyle    Check linting of Python docstrings"
     echo "  --lint-shellcheck    Check linting of shell scripts"
     echo "  --lint-yamllint      Check linting of YAML files"
@@ -177,6 +183,7 @@ case $arg in
 --lint-flake8) lint_flake8 ;;
 --lint-jsonlint) lint_jsonlint ;;
 --lint-manifest) lint_manifest ;;
+--lint-markdownlint) lint_markdownlint ;;
 --lint-pydocstyle) lint_pydocstyle ;;
 --lint-shellcheck) lint_shellcheck ;;
 --lint-yamllint) lint_yamllint ;;
