@@ -30,11 +30,13 @@ from reana_commons.utils import get_disk_usage
 import reana_db.config
 from reana_db.config import (
     DEFAULT_QUOTA_LIMITS,
+    DEFAULT_QUOTA_CPU_PERIOD_RESET_MONTHS,
     DEFAULT_QUOTA_RESOURCES,
     WORKFLOW_TERMINATION_QUOTA_UPDATE_POLICY,
 )
 from reana_db.utils import (
     build_workspace_path,
+    get_current_quota_period_start_at,
     store_workflow_disk_quota,
     split_run_number,
     update_users_cpu_quota,
@@ -45,6 +47,7 @@ from reana_db.utils import (
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Enum,
@@ -292,12 +295,28 @@ class User(Base, Timestamp, QuotaBase):
 
         resources = Session.query(Resource).all()
         for resource in resources:
+            quota_period_months = None
+            quota_period_start_at = None
+
+            if (
+                resource.type_ == ResourceType.cpu
+                and DEFAULT_QUOTA_CPU_PERIOD_RESET_MONTHS
+            ):
+                quota_period_months = DEFAULT_QUOTA_CPU_PERIOD_RESET_MONTHS
+                account_created_at = self.created or datetime.utcnow()
+                quota_period_start_at = get_current_quota_period_start_at(
+                    reference_start_at=account_created_at,
+                    quota_period_months=DEFAULT_QUOTA_CPU_PERIOD_RESET_MONTHS,
+                )
+
             self.resources.append(
                 UserResource(
                     user_id=self.id_,
                     resource_id=resource.id_,
                     quota_limit=DEFAULT_QUOTA_LIMITS[resource.type_.name],
                     quota_used=0,
+                    quota_period_months=quota_period_months,
+                    quota_period_start_at=quota_period_start_at,
                 )
             )
 
@@ -1260,12 +1279,21 @@ class UserResource(Base, Timestamp):
     """User Resource table."""
 
     __tablename__ = "user_resource"
-    __table_args__ = {"schema": "__reana"}
+    __table_args__ = (
+        CheckConstraint(
+            "quota_period_months IS NULL OR quota_period_months > 0",
+            name="quota_period_months_positive",
+        ),
+        {"schema": "__reana"},
+    )
 
     user_id = Column(UUIDType, ForeignKey("__reana.user_.id_"), primary_key=True)
     resource_id = Column(UUIDType, ForeignKey("__reana.resource.id_"), primary_key=True)
     quota_limit = Column(BigInteger())
     quota_used = Column(BigInteger())
+    quota_period_months = Column(Integer, nullable=True)
+    quota_period_start_at = Column(DateTime, nullable=True)
+
     user = relationship("User", backref="resources")
     resource = relationship("Resource", backref="user_resource")
 
