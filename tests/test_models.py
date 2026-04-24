@@ -295,9 +295,8 @@ def test_workflow_cpu_quota_usage_update(db, session, run_workflow):
     workflow = run_workflow(time_elapsed_seconds=time_elapsed_seconds)
     cpu_resource = get_default_quota_resource(ResourceType.cpu.name)
     cpu_milliseconds = (
-        WorkflowResource.query.filter_by(
-            workflow_id=workflow.id_, resource_id=cpu_resource.id_
-        )
+        session.query(WorkflowResource)
+        .filter_by(workflow_id=workflow.id_, resource_id=cpu_resource.id_)
         .first()
         .quota_used
     )

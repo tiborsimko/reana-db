@@ -34,8 +34,7 @@ engine = create_engine(
     pool_size=SQLALCHEMY_POOL_SIZE,
     pool_timeout=SQLALCHEMY_POOL_TIMEOUT,
 )
-Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-Base.query = Session.query_property()
+Session = scoped_session(sessionmaker(autoflush=False, bind=engine))
 
 
 def init_db():
@@ -43,8 +42,11 @@ def init_db():
     import reana_db.models
 
     reana_schema_name = "__reana"
-    if not engine.dialect.has_schema(engine, reana_schema_name):
-        event.listen(Base.metadata, "before_create", CreateSchema(reana_schema_name))
+    with engine.connect() as connection:
+        if not engine.dialect.has_schema(connection, reana_schema_name):
+            event.listen(
+                Base.metadata, "before_create", CreateSchema(reana_schema_name)
+            )
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(bind=engine)

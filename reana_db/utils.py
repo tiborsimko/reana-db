@@ -79,6 +79,7 @@ def _get_workflow_with_uuid_or_name(
 
     :rtype: reana-db.models.Workflow
     """
+    from reana_db.database import Session
     from reana_db.models import UserWorkflow, Workflow
 
     # Check existence
@@ -156,9 +157,8 @@ def _get_workflow_with_uuid_or_name(
         # Search by `run_number_major` and `run_number_minor`, since it is a primary key.
         if include_shared_workflows:
             workflow = (
-                Workflow.query.outerjoin(
-                    UserWorkflow, UserWorkflow.workflow_id == Workflow.id_
-                )
+                Session.query(Workflow)
+                .outerjoin(UserWorkflow, UserWorkflow.workflow_id == Workflow.id_)
                 .filter(
                     (Workflow.name == workflow_name)
                     & (Workflow.run_number_major == run_number_major)
@@ -171,12 +171,16 @@ def _get_workflow_with_uuid_or_name(
                 .one_or_none()
             )
         else:
-            workflow = Workflow.query.filter(
-                Workflow.name == workflow_name,
-                Workflow.run_number_major == run_number_major,
-                Workflow.run_number_minor == run_number_minor,
-                Workflow.owner_id == user_uuid,
-            ).one_or_none()
+            workflow = (
+                Session.query(Workflow)
+                .filter(
+                    Workflow.name == workflow_name,
+                    Workflow.run_number_major == run_number_major,
+                    Workflow.run_number_minor == run_number_minor,
+                    Workflow.owner_id == user_uuid,
+                )
+                .one_or_none()
+            )
 
         if not workflow:
             raise ValueError(
@@ -196,13 +200,13 @@ def _get_workflow_by_name(workflow_name, user_uuid, include_shared_workflows=Fal
 
     :rtype: reana-db.models.Workflow
     """
+    from reana_db.database import Session
     from reana_db.models import UserWorkflow, Workflow
 
     if include_shared_workflows:
         workflow = (
-            Workflow.query.outerjoin(
-                UserWorkflow, Workflow.id_ == UserWorkflow.workflow_id
-            )
+            Session.query(Workflow)
+            .outerjoin(UserWorkflow, Workflow.id_ == UserWorkflow.workflow_id)
             .filter(
                 (Workflow.name == workflow_name)
                 & (
@@ -217,9 +221,8 @@ def _get_workflow_by_name(workflow_name, user_uuid, include_shared_workflows=Fal
         )
     else:
         workflow = (
-            Workflow.query.filter(
-                Workflow.name == workflow_name, Workflow.owner_id == user_uuid
-            )
+            Session.query(Workflow)
+            .filter(Workflow.name == workflow_name, Workflow.owner_id == user_uuid)
             .order_by(
                 Workflow.run_number_major.desc(), Workflow.run_number_minor.desc()
             )
@@ -245,13 +248,13 @@ def _get_workflow_by_uuid(workflow_uuid, user_uuid, include_shared_workflows=Fal
 
     :rtype: reana-db.models.Workflow
     """
+    from reana_db.database import Session
     from reana_db.models import UserWorkflow, Workflow
 
     if include_shared_workflows:
         workflow = (
-            Workflow.query.outerjoin(
-                UserWorkflow, Workflow.id_ == UserWorkflow.workflow_id
-            )
+            Session.query(Workflow)
+            .outerjoin(UserWorkflow, Workflow.id_ == UserWorkflow.workflow_id)
             .filter(
                 (Workflow.id_ == workflow_uuid)
                 & (
@@ -262,9 +265,11 @@ def _get_workflow_by_uuid(workflow_uuid, user_uuid, include_shared_workflows=Fal
             .first()
         )
     else:
-        workflow = Workflow.query.filter(
-            Workflow.id_ == workflow_uuid, Workflow.owner_id == user_uuid
-        ).first()
+        workflow = (
+            Session.query(Workflow)
+            .filter(Workflow.id_ == workflow_uuid, Workflow.owner_id == user_uuid)
+            .first()
+        )
 
     if not workflow:
         raise ValueError(
@@ -350,7 +355,13 @@ def get_default_quota_resource(resource_type):
             "Default resource of type {} does not exist.".format(resource_type)
         )
 
-    return Resource.query.filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type]).one()
+    from reana_db.database import Session
+
+    return (
+        Session.query(Resource)
+        .filter_by(name=DEFAULT_QUOTA_RESOURCES[resource_type])
+        .one()
+    )
 
 
 def should_skip_quota_update(resource_type) -> bool:
@@ -397,12 +408,14 @@ def update_users_disk_quota(
 
     disk_resource = get_default_quota_resource(ResourceType.disk.name)
 
-    users = [user] if user else User.query.all()
+    users = [user] if user else Session.query(User).all()
     timer = Timer("User disk quota usage update", total=len(users))
     for u in users:
-        user_resource_quota = UserResource.query.filter_by(
-            user_id=u.id_, resource_id=disk_resource.id_
-        ).one()
+        user_resource_quota = (
+            Session.query(UserResource)
+            .filter_by(user_id=u.id_, resource_id=disk_resource.id_)
+            .one()
+        )
         if bytes_to_sum is not None:
             updated_quota_usage = user_resource_quota.quota_used + bytes_to_sum
             if updated_quota_usage < 0:
@@ -423,7 +436,7 @@ def update_users_disk_quota(
                 )
                 .filter(WorkflowResource.workflow_id == Workflow.id_)
                 .filter(WorkflowResource.resource_id == disk_resource.id_)
-                .filter(Workflow.id_.in_(Session.query(u.workflows.subquery().c.id_)))
+                .filter(Workflow.owner_id == u.id_)
                 # multiple workflows might have the same workspace path, so the query groups
                 # by `workspace_path` in order to consider each workspace only once
                 .group_by(Workflow.workspace_path)
@@ -459,9 +472,11 @@ def update_workflow_cpu_quota(workflow) -> int:
         # WorkflowResource might exist already if the cluster
         # follows a combined termination + periodic policy (eg. created
         # by the status listener, revisited by the cronjob)
-        workflow_resource = WorkflowResource.query.filter_by(
-            workflow_id=workflow.id_, resource_id=cpu_resource.id_
-        ).one_or_none()
+        workflow_resource = (
+            Session.query(WorkflowResource)
+            .filter_by(workflow_id=workflow.id_, resource_id=cpu_resource.id_)
+            .one_or_none()
+        )
         if workflow_resource:
             workflow_resource.quota_used = cpu_milliseconds
         else:
@@ -483,9 +498,11 @@ def update_workflows_cpu_quota() -> None:
 
     # logs and reana_specification are not loaded to avoid consuming
     # huge amounts of memory
-    workflows = Workflow.query.options(
-        defer(Workflow.logs), defer(Workflow.reana_specification)
-    ).all()
+    workflows = (
+        Session.query(Workflow)
+        .options(defer(Workflow.logs), defer(Workflow.reana_specification))
+        .all()
+    )
     # We expunge all the workflows, as they will not be modified when updating the quotas.
     # This makes `Session.commit()` much faster
     for workflow in workflows:
@@ -512,6 +529,7 @@ def update_users_cpu_quota(user=None) -> None:
         UserResource,
         UserToken,
         UserTokenStatus,
+        Workflow,
         WorkflowResource,
     )
 
@@ -524,7 +542,8 @@ def update_users_cpu_quota(user=None) -> None:
         users = [user]
     else:
         users = (
-            User.query.join(UserToken)
+            Session.query(User)
+            .join(UserToken)
             .filter_by(status=UserTokenStatus.active)  # skip users with no active token
             .all()
         )
@@ -533,14 +552,17 @@ def update_users_cpu_quota(user=None) -> None:
         cpu_milliseconds = (
             Session.query(func.sum(WorkflowResource.quota_used))
             .filter(WorkflowResource.resource_id == cpu_resource.id_)
-            .join(user.workflows.subquery())
+            .join(Workflow, WorkflowResource.workflow_id == Workflow.id_)
+            .filter(Workflow.owner_id == user.id_)
             .scalar()
         )
         if not cpu_milliseconds:
             cpu_milliseconds = 0
-        user_resource_quota = UserResource.query.filter_by(
-            user_id=user.id_, resource_id=cpu_resource.id_
-        ).first()
+        user_resource_quota = (
+            Session.query(UserResource)
+            .filter_by(user_id=user.id_, resource_id=cpu_resource.id_)
+            .first()
+        )
         user_resource_quota.quota_used = cpu_milliseconds
         Session.commit()
         timer_user.count_event()
@@ -659,9 +681,11 @@ def update_workflows_disk_quota() -> None:
 
     # logs and reana_specification are not loaded to avoid consuming
     # huge amounts of memory
-    workflows = Workflow.query.options(
-        defer(Workflow.logs), defer(Workflow.reana_specification)
-    ).all()
+    workflows = (
+        Session.query(Workflow)
+        .options(defer(Workflow.logs), defer(Workflow.reana_specification))
+        .all()
+    )
     # We expunge all the workflows, as they will not be modified when updating the quotas.
     # This makes `Session.commit()` much faster
     for workflow in workflows:
@@ -696,7 +720,7 @@ def change_key_encrypted_columns(old_key):
 
     # write columns to the database to encrypt them with new key
     for user_token in user_tokens:
-        UserToken.query.filter_by(id_=user_token.id_).update(
+        Session.query(UserToken).filter_by(id_=user_token.id_).update(
             {"token": user_token.token}
         )
     Session.commit()

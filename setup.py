@@ -39,8 +39,8 @@ for key, reqs in extras_require.items():
 install_requires = [
     "alembic>=1.4.2",
     "psycopg2-binary>=2.6.1",
-    "SQLAlchemy>=1.2.7,<1.5.0",
-    "SQLAlchemy-Utils[encrypted]>=0.37.0",
+    "SQLAlchemy>=2.0.0,<3.0.0",
+    "SQLAlchemy-Utils[encrypted]>=0.41.0,<0.42.0",
     "reana-commons>=0.95.0a1,<0.96.0",
 ]
 

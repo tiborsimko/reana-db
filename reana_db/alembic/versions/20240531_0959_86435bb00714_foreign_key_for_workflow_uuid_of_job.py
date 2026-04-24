@@ -49,13 +49,13 @@ def upgrade():
     #     1b. delete jobs from `job` table
     op.execute(
         job_table.delete().where(
-            job_table.c.workflow_uuid.notin_(sa.select([workflow_table.c.id_]))
+            job_table.c.workflow_uuid.notin_(sa.select(workflow_table.c.id_))
         )
     )
     #     1c. delete rows in `job_cache` that reference deleted jobs
     op.execute(
         job_cache_table.delete().where(
-            job_cache_table.c.job_id.notin_(sa.select([job_table.c.id_]))
+            job_cache_table.c.job_id.notin_(sa.select(job_table.c.id_))
         )
     )
     #     1d. enable foreign key checks

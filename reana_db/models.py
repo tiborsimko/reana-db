@@ -60,7 +60,7 @@ from sqlalchemy import (
     or_,
     text,
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy_utils import EncryptedType, JSONType, UUIDType
@@ -282,7 +282,9 @@ class User(Base, Timestamp, QuotaBase):
 
     def initialize_user_quota_limits(self):
         """Initialize user quota limits."""
-        resources = Resource.query.all()
+        from .database import Session
+
+        resources = Session.query(Resource).all()
         for resource in resources:
             self.resources.append(
                 UserResource(
@@ -770,7 +772,9 @@ class Workflow(Base, Timestamp, QuotaBase):
 
     def activate_workspace_retention_rules(self):
         """Activate workspace retention rules for the workflow."""
-        rules = WorkspaceRetentionRule.query.filter_by(
+        from .database import Session
+
+        rules = Session.query(WorkspaceRetentionRule).filter_by(
             workflow_id=self.id_, status=WorkspaceRetentionRuleStatus.created
         )
         update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.active)
@@ -782,7 +786,9 @@ class Workflow(Base, Timestamp, QuotaBase):
         the same name and the same major run number. This includes the
         original workflow, as well as all the following restarts.
         """
-        restarts = Workflow.query.filter(
+        from .database import Session
+
+        restarts = Session.query(Workflow).filter(
             Workflow.name == self.name,
             Workflow.owner_id == self.owner_id,
             Workflow.run_number_major == self.run_number_major,
@@ -791,13 +797,19 @@ class Workflow(Base, Timestamp, QuotaBase):
 
     def inactivate_workspace_retention_rules(self):
         """Inactivate workspace retention rules for all the parent workflows."""
-        rules = WorkspaceRetentionRule.query.join(
-            self.get_all_restarts().subquery()
-        ).filter(
-            or_(
-                WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.created,
-                WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.active,
-            ),
+        from .database import Session
+
+        rules = (
+            Session.query(WorkspaceRetentionRule)
+            .join(self.get_all_restarts().subquery())
+            .filter(
+                or_(
+                    WorkspaceRetentionRule.status
+                    == WorkspaceRetentionRuleStatus.created,
+                    WorkspaceRetentionRule.status
+                    == WorkspaceRetentionRuleStatus.active,
+                ),
+            )
         )
         update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.inactive)
 
@@ -807,10 +819,14 @@ class Workflow(Base, Timestamp, QuotaBase):
         All the restarts of the workflow are considered when checking the retention
         rules, as they all share the same workspace.
         """
-        pending_rules = WorkspaceRetentionRule.query.join(
-            self.get_all_restarts().subquery()
-        ).filter(
-            WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.pending,
+        from .database import Session
+
+        pending_rules = (
+            Session.query(WorkspaceRetentionRule)
+            .join(self.get_all_restarts().subquery())
+            .filter(
+                WorkspaceRetentionRule.status == WorkspaceRetentionRuleStatus.pending,
+            )
         )
         return pending_rules.first() is not None
 
@@ -1118,9 +1134,10 @@ class WorkspaceRetentionRule(Base):
 def workspace_retention_change_listener(mapper, connection, workspace_retention_rule):
     """Workspace retention change listener."""
     connection.execute(
-        WorkspaceRetentionAuditLog.__table__.insert(),
-        workspace_retention_rule_id=workspace_retention_rule.id_,
-        action=workspace_retention_rule.status,
+        WorkspaceRetentionAuditLog.__table__.insert().values(
+            workspace_retention_rule_id=workspace_retention_rule.id_,
+            action=workspace_retention_rule.status,
+        )
     )
 
 
@@ -1207,7 +1224,7 @@ class Resource(Base, Timestamp):
         """Initialise default Resources."""
         from reana_db.database import Session
 
-        existing_resources = [r.name for r in Resource.query.all()]
+        existing_resources = [r.name for r in Session.query(Resource).all()]
         default_resources = []
         resource_type_to_unit = {
             ResourceType.cpu: ResourceUnit.milliseconds,
