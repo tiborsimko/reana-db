@@ -166,13 +166,12 @@ class User(Base, Timestamp, QuotaBase):
     email = Column(String(length=255), unique=True, primary_key=True)
     full_name = Column(String(length=255))
     username = Column(String(length=255))
-    tokens = relationship("UserToken", backref="user_", lazy="dynamic")
-    workflows = relationship("Workflow", backref="owner", lazy="dynamic")
+    tokens = relationship("UserToken", backref="user_")
+    workflows = relationship("Workflow", backref="owner")
     workflows_shared_with_me = relationship(
         "Workflow",
         secondary="__reana.user_workflow",
-        backref=backref("users_it_is_shared_with", lazy="dynamic"),
-        lazy="dynamic",
+        backref="users_it_is_shared_with",
         viewonly=True,
         sync_backref=False,
     )
@@ -189,9 +188,17 @@ class User(Base, Timestamp, QuotaBase):
     @hybrid_property
     def active_token(self):
         """REANA active access token object."""
-        return self.tokens.filter_by(
-            status=UserTokenStatus.active, type_=UserTokenType.reana
-        ).one_or_none()
+        from .database import Session
+
+        return (
+            Session.query(UserToken)
+            .filter_by(
+                user_id=self.id_,
+                status=UserTokenStatus.active,
+                type_=UserTokenType.reana,
+            )
+            .one_or_none()
+        )
 
     @hybrid_property
     def access_token(self):
@@ -203,12 +210,10 @@ class User(Base, Timestamp, QuotaBase):
         """REANA access token setter."""
         from .database import Session
 
-        if self.tokens.count() and self.active_token:
+        token_count = Session.query(UserToken).filter_by(user_id=self.id_).count()
+        if token_count and self.active_token:
             raise Exception("User {} has already an active access token.".format(self))
-        if (
-            self.tokens.count()
-            and self.access_token_status == UserTokenStatus.requested.name
-        ):
+        if token_count and self.access_token_status == UserTokenStatus.requested.name:
             self.latest_access_token.status = UserTokenStatus.active
             self.latest_access_token.token = value
         else:
@@ -223,11 +228,14 @@ class User(Base, Timestamp, QuotaBase):
     @hybrid_property
     def latest_access_token(self):
         """REANA most recent access token."""
+        from .database import Session
+
         latest_reana_token = (
-            self.tokens.filter_by(type_=UserTokenType.reana).order_by(
-                UserToken.created.desc()
-            )
-        ).first()
+            Session.query(UserToken)
+            .filter_by(user_id=self.id_, type_=UserTokenType.reana)
+            .order_by(UserToken.created.desc())
+            .first()
+        )
         return latest_reana_token or None
 
     @hybrid_property
@@ -248,12 +256,10 @@ class User(Base, Timestamp, QuotaBase):
         """Create user token and mark it as requested."""
         from .database import Session
 
-        if self.tokens.count() and self.active_token:
+        token_count = Session.query(UserToken).filter_by(user_id=self.id_).count()
+        if token_count and self.active_token:
             raise Exception("User {} has already an active access token.".format(self))
-        if (
-            self.tokens.count()
-            and self.access_token_status == UserTokenStatus.requested.name
-        ):
+        if token_count and self.access_token_status == UserTokenStatus.requested.name:
             raise Exception(
                 "User {} has already requested an access" " token.".format(self)
             )
@@ -303,13 +309,20 @@ class User(Base, Timestamp, QuotaBase):
 
     def get_workflow_overload_priority(self):
         """Get priority factor based on the number of current workflows ``running``."""
+        from .database import Session
+
         max_concurrent_workflows = REANA_MAX_CONCURRENT_BATCH_WORKFLOWS
-        running_count = self.workflows.filter(
-            or_(
-                Workflow.status == RunStatus.pending,
-                Workflow.status == RunStatus.running,
+        running_count = (
+            Session.query(Workflow)
+            .filter(
+                Workflow.owner_id == self.id_,
+                or_(
+                    Workflow.status == RunStatus.pending,
+                    Workflow.status == RunStatus.running,
+                ),
             )
-        ).count()
+            .count()
+        )
         if running_count >= max_concurrent_workflows:
             return 0.1
         # we reduce the 10% (* 0.9) to avoid getting a 0 multiplier factor when
@@ -541,7 +554,6 @@ class Service(Base):
     logs = relationship(
         "ServiceLog",
         back_populates="service",
-        lazy="dynamic",
     )
 
     __table_args__ = (
@@ -590,21 +602,17 @@ class Workflow(Base, Timestamp, QuotaBase):
     sessions = relationship(
         "InteractiveSession",
         secondary="__reana.workflow_session",
-        lazy="dynamic",
         backref="workflow",
         cascade="all, delete",
     )
     services = relationship(
         "Service",
         secondary="__reana.workflow_service",
-        lazy="dynamic",
         backref="workflow",
         cascade="all, delete",
     )
-    retention_rules = relationship(
-        "WorkspaceRetentionRule", backref="workflow", lazy="dynamic"
-    )
-    jobs = relationship("Job", backref="workflow", lazy="dynamic")
+    retention_rules = relationship("WorkspaceRetentionRule", backref="workflow")
+    jobs = relationship("Job", backref="workflow")
 
     __table_args__ = (
         UniqueConstraint(
@@ -1099,7 +1107,7 @@ class WorkspaceRetentionRule(Base):
         nullable=False,
     )
     audit_logs = relationship(
-        "WorkspaceRetentionAuditLog", backref="workspace_retention_rule", lazy="dynamic"
+        "WorkspaceRetentionAuditLog", backref="workspace_retention_rule"
     )
 
     __table_args__ = (

@@ -117,7 +117,7 @@ def test_workflow_retention_rules(db, session, new_user):
         return workflow
 
     def rule_status(workflow):
-        return workflow.retention_rules.first().status
+        return workflow.retention_rules[0].status
 
     retention_rules = [{"workspace_files": "**/*.root", "retention_days": 1}]
     workflow = add_workflow("workflow")
@@ -137,7 +137,7 @@ def test_workflow_retention_rules(db, session, new_user):
     assert rule_status(workflow_restart) == WorkspaceRetentionRuleStatus.inactive
     assert rule_status(workflow_another_name) == WorkspaceRetentionRuleStatus.created
 
-    r = workflow_restart.retention_rules.first()
+    r = workflow_restart.retention_rules[0]
     r.status = WorkspaceRetentionRuleStatus.pending
     session.add(r)
     session.commit()
@@ -145,7 +145,7 @@ def test_workflow_retention_rules(db, session, new_user):
     assert workflow_restart.workspace_has_pending_retention_rules()
     assert not workflow_another_name.workspace_has_pending_retention_rules()
 
-    rules = workflow.retention_rules.all()
+    rules = workflow.retention_rules
     with pytest.raises(Exception) as e:
         update_workspace_retention_rules(rules, WorkspaceRetentionRuleStatus.created)
     assert "Cannot transition workspace retention rule" in e.value.args[0]
@@ -243,7 +243,7 @@ def test_access_token(db, session, new_user):
     """Test user access token use cases."""
     assert new_user.access_token
     assert new_user.access_token_status == UserTokenStatus.active.name
-    assert new_user.tokens.count() == 1
+    assert len(new_user.tokens) == 1
     assert new_user.active_token.type_ == UserTokenType.reana
 
     # Assign second active access token
@@ -272,7 +272,7 @@ def test_access_token(db, session, new_user):
     new_user.access_token = "new_token"
     session.commit()
     assert new_user.access_token == "new_token"
-    assert new_user.tokens.count() == 2
+    assert len(new_user.tokens) == 2
 
     # Status of most recent access token
     assert new_user.access_token_status == UserTokenStatus.active.name
