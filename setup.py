@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of REANA.
-# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024 CERN.
+# Copyright (C) 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -41,7 +41,7 @@ install_requires = [
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=2.0.0,<3.0.0",
     "SQLAlchemy-Utils[encrypted]>=0.41.0,<0.42.0",
-    "reana-commons>=0.95.0a1,<0.96.0",
+    "reana-commons>=0.95.0a15,<0.96.0",
 ]
 
 packages = find_packages()
