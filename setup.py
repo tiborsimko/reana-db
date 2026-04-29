@@ -26,7 +26,7 @@ extras_require = {
         "sphinx-click>=1.0.4",
     ],
     "tests": [
-        "pytest-reana>=0.95.0a2,<0.96.0",
+        "pytest-reana>=0.95.0a9,<0.96.0",
     ],
 }
 
