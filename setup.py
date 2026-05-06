@@ -26,7 +26,10 @@ extras_require = {
         "sphinx-click>=1.0.4",
     ],
     "tests": [
-        "pytest-reana>=0.95.0a9,<0.96.0",
+        "reana-commons[tests]>=0.95.0a15,<0.96.0",
+        "pytest>=7.0.0,<9.0.0",
+        "pytest-cache>=1.0,<2.0",
+        "pytest-cov>=3.0.0,<4.0",
     ],
 }
 
@@ -66,6 +69,9 @@ setup(
     packages=packages,
     entry_points={
         "console_scripts": ["reana-db=reana_db.cli:cli"],
+        "pytest11": [
+            "reana_db = reana_db.testing.plugin",
+        ],
     },
     zip_safe=False,
     include_package_data=True,
