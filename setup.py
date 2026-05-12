@@ -26,7 +26,7 @@ extras_require = {
         "sphinx-click>=1.0.4",
     ],
     "tests": [
-        "reana-commons[tests]>=0.95.0a15,<0.96.0",
+        "reana-commons[tests]>=0.95.0a16,<0.96.0",
         "pytest>=7.0.0,<9.0.0",
         "pytest-cache>=1.0,<2.0",
         "pytest-cov>=3.0.0,<4.0",
@@ -44,7 +44,7 @@ install_requires = [
     "psycopg2-binary>=2.6.1",
     "SQLAlchemy>=2.0.0,<3.0.0",
     "SQLAlchemy-Utils[encrypted]>=0.41.0,<0.42.0",
-    "reana-commons>=0.95.0a15,<0.96.0",
+    "reana-commons>=0.95.0a16,<0.96.0",
 ]
 
 packages = find_packages()
