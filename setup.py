@@ -42,7 +42,9 @@ for key, reqs in extras_require.items():
 install_requires = [
     "alembic>=1.4.2",
     "psycopg2-binary>=2.6.1",
-    "SQLAlchemy>=2.0.0,<3.0.0",
+    # SQLAlchemy-Utils does not yet support SQLAlchemy 2.1.
+    # https://github.com/kvesteri/sqlalchemy-utils/pull/831
+    "SQLAlchemy>=2.0.0,<2.1.0",
     "SQLAlchemy-Utils[encrypted]>=0.41.0,<0.42.0",
     "reana-commons>=0.95.0a16,<0.96.0",
 ]
