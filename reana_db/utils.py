@@ -166,7 +166,7 @@ def _get_workflow_with_uuid_or_name(
                     & (Workflow.run_number_minor == run_number_minor)
                     & (
                         (Workflow.owner_id == user_uuid)
-                        | (UserWorkflow.user_id == user_uuid)
+                        | ((UserWorkflow.user_id == user_uuid) & UserWorkflow.is_active)
                     )
                 )
                 .one_or_none()
@@ -212,7 +212,7 @@ def _get_workflow_by_name(workflow_name, user_uuid, include_shared_workflows=Fal
                 (Workflow.name == workflow_name)
                 & (
                     (Workflow.owner_id == user_uuid)
-                    | (UserWorkflow.user_id == user_uuid)
+                    | ((UserWorkflow.user_id == user_uuid) & UserWorkflow.is_active)
                 )
             )
             .order_by(
@@ -260,7 +260,7 @@ def _get_workflow_by_uuid(workflow_uuid, user_uuid, include_shared_workflows=Fal
                 (Workflow.id_ == workflow_uuid)
                 & (
                     (Workflow.owner_id == user_uuid)
-                    | (UserWorkflow.user_id == user_uuid)
+                    | ((UserWorkflow.user_id == user_uuid) & UserWorkflow.is_active)
                 )
             )
             .first()

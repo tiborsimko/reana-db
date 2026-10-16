@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, print_function
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Barrier
 from types import SimpleNamespace
 from uuid import uuid4
@@ -28,6 +28,7 @@ from reana_db.models import (
     InteractiveSession,
     User,
     UserResource,
+    UserWorkflow,
     Workflow,
 )
 from reana_db.secrets import compute_lookup_digest
@@ -119,6 +120,53 @@ def test_get_workflow_with_uuid_or_name(session, new_user):
         _get_workflow_with_uuid_or_name(workflow.name, another_user_uuid)
     with pytest.raises(ValueError):
         _get_workflow_with_uuid_or_name(f"{workflow.name}.1", another_user_uuid)
+
+
+@pytest.mark.parametrize(
+    "valid_until_days, is_active",
+    [(None, True), (1, True), (0, True), (-1, False)],
+)
+def test_get_workflow_with_uuid_or_name_applies_share_expiry(
+    session, new_user, valid_until_days, is_active
+):
+    """A recipient can look up a shared workflow until the share expires."""
+    workflow = Workflow(
+        id_=uuid4(),
+        name="shared-workflow",
+        owner_id=new_user.id_,
+        reana_specification=[],
+        type_="serial",
+        logs="",
+    )
+    recipient = User(email=f"{uuid4()}@reana.io")
+    session.add_all([workflow, recipient])
+    session.flush()
+    valid_until = None
+    if valid_until_days is not None:
+        # Shares store the date of their last valid day at midnight.
+        today = datetime.combine(datetime.now().date(), datetime.min.time())
+        valid_until = today + timedelta(days=valid_until_days)
+    share = UserWorkflow(
+        workflow_id=workflow.id_, user_id=recipient.id_, valid_until=valid_until
+    )
+    session.add(share)
+    session.commit()
+
+    assert share.is_active == is_active
+    for workflow_id_or_name in (str(workflow.id_), workflow.name, f"{workflow.name}.1"):
+        # The owner keeps access, whatever the state of the share.
+        assert workflow == _get_workflow_with_uuid_or_name(
+            workflow_id_or_name, str(new_user.id_), True
+        )
+        if is_active:
+            assert workflow == _get_workflow_with_uuid_or_name(
+                workflow_id_or_name, str(recipient.id_), True
+            )
+        else:
+            with pytest.raises(ValueError):
+                _get_workflow_with_uuid_or_name(
+                    workflow_id_or_name, str(recipient.id_), True
+                )
 
 
 @pytest.mark.parametrize(

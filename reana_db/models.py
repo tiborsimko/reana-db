@@ -14,7 +14,7 @@ import enum
 import logging
 import math
 import uuid
-from datetime import datetime
+from datetime import date, datetime, time
 from functools import reduce
 from typing import Dict, List, Tuple
 
@@ -1300,6 +1300,11 @@ class AccessType(enum.Enum):
     read = 0
 
 
+def _start_of_today():
+    """Return the start of the current day."""
+    return datetime.combine(date.today(), time.min)
+
+
 class UserWorkflow(Base):
     """UserWorkflow table."""
 
@@ -1311,6 +1316,22 @@ class UserWorkflow(Base):
     access_type = Column(Enum(AccessType), default=AccessType.read, nullable=False)
     message = Column(String(5000))
     valid_until = Column(DateTime)
+
+    @hybrid_property
+    def is_active(self):
+        """Return whether the share has not expired.
+
+        A share stays valid until the end of the day of ``valid_until``.
+        """
+        valid_until = self.valid_until
+        if isinstance(valid_until, datetime):
+            valid_until = valid_until.date()
+        return valid_until is None or valid_until >= date.today()
+
+    @is_active.expression
+    def is_active(cls):
+        """Return the SQL condition that selects the shares that have not expired."""
+        return or_(cls.valid_until.is_(None), cls.valid_until >= _start_of_today())
 
     def __repr__(self):
         """User Workflow string representation."""

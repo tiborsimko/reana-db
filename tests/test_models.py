@@ -9,7 +9,7 @@
 """REANA-DB models tests."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import hashlib
 from threading import Barrier
 from types import SimpleNamespace
@@ -32,6 +32,7 @@ from reana_db.models import (
     ResourceType,
     JobStatus,
     User,
+    UserWorkflow,
     Workflow,
     WorkflowResource,
     RunStatus,
@@ -954,3 +955,21 @@ def test_get_workflow_complexity_priority(
     workflow.complexity = complexity
     session.commit()
     assert workflow.get_complexity_priority(cluster_memory) == priority
+
+
+@pytest.mark.parametrize(
+    "valid_until, is_active",
+    [
+        (None, True),
+        (date.today(), True),
+        (date.today() - timedelta(days=1), False),
+        (datetime.combine(date.today(), datetime.min.time()), True),
+        (
+            datetime.combine(date.today(), datetime.min.time()) - timedelta(days=1),
+            False,
+        ),
+    ],
+)
+def test_user_workflow_is_active(valid_until, is_active):
+    """Test ``UserWorkflow.is_active`` with the date of a new share and a stored one."""
+    assert UserWorkflow(valid_until=valid_until).is_active == is_active
